@@ -315,6 +315,9 @@ hr {
 	left: 2em;*/
 	float: left;
 }
+.sidebar-controls {
+	height: 2.5em;
+}
 .sidebar-group {
 	margin-bottom: 1.5em;
 	overflow: auto;

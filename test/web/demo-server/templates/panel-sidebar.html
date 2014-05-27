@@ -1,14 +1,21 @@
-<h3>Webcam</h3>
+<!--<hr/>-->
+<h3> Webcam </h3>
 <hr/>
 <div class="sidebar-group">
     <div id="webcam-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
-        <div class="buttonset">
-            <button id = "webcam-sidebar-nextbtn" class="refresh-text" onclick=""> Switch Camera </button>
-            <input type="checkbox" id="webcam-sidebar-activated" class="transferthick-e-w-icon" checked="1">
-            <label for="webcam-sidebar-activated" style="margin-right: -5px"> &nbsp; </label>
-            <input type="checkbox" id="webcam-sidebar-disconnect" class="close-icon">
-            <label for="webcam-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
+        <div class="sidebar-controls">
+            <div class="buttonset sidebar-right">
+                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-activated" class="transferthick-e-w-icon" checked="1">
+                <label for="webcam-sidebar-activated" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-paused" class="pause-icon">
+                <label for="webcam-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-disconnect" class="close-icon">
+                <label for="webcam-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
+            </div>
+            <div class="sidebar-right">
+                <button id = "webcam-sidebar-nextbtn" class="refresh-text" onclick=""> Switch Camera </button>
+            </div>
         </div>
         <table id="webcam-sidebar-table" class="sidebar-table">
             <tr id="tr-webcam-status">
@@ -31,18 +38,19 @@
        </table>
     </div>
 </div>
-<h3>Image Processing Stream</h3>
+<!--<hr/>-->
+<h3> Image Processing </h3>
 <hr/>
 <div class="sidebar-group">
     <div id="cv-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
-        <div>
+        <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
-                <input type="checkbox" id="cv-sidebar-paused" class="pause-icon">
-                <label for="cv-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
-                <input type="checkbox" id="cv-sidebar-receiving" class="transferthick-e-w-icon" checked="1">
+                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-receiving" class="transferthick-e-w-icon" checked="1">
                 <label for="cv-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
-                <input type="checkbox" id="cv-sidebar-disconnect" class="close-icon">
+                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-paused" class="pause-icon">
+                <label for="cv-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-disconnect" class="close-icon">
                 <label for="cv-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
             </div>
             <div class="sidebar-right">
@@ -79,22 +87,27 @@
        </table>
     </div>
 </div>
-<h3>BMD/Communication Streams</h3>
+<!--<hr/>-->
+<h3> BMD/Communication </h3>
 <hr/>
 <div class="sidebar-group">
     <div id="bmd-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
-        <div class="buttonset">
-            <input type="checkbox" id="bmd-sidebar-paused" class="pause-icon">
-            <label for="bmd-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
-            <input type="checkbox" id="bmd-sidebar-receiving" class="transferthick-e-w-icon" checked="1">
-            <label for="bmd-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
-            <input type="checkbox" id="bmd-sidebar-mqtt" checked="1">
-            <label for="bmd-sidebar-mqtt" style="margin-right: -5px"> MQTT </label>
-            <input type="checkbox" id="bmd-sidebar-adapter" checked="1">
-            <label for="bmd-sidebar-adapter" style="margin-right: -5px"> SIM </label>
-            <input type="checkbox" id="bmd-sidebar-disconnect" class="close-icon">
-            <label for="bmd-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
+        <div class="sidebar-controls">
+            <div class="buttonset sidebar-right">
+                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-receiving" class="transferthick-e-w-icon" checked="1">
+                <label for="bmd-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-paused" class="pause-icon">
+                <label for="bmd-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-disconnect" class="close-icon">
+                <label for="bmd-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
+            </div>
+            <div class="buttonset sidebar-right">
+                <input type="checkbox" id="bmd-sidebar-mqtt" checked="1">
+                <label for="bmd-sidebar-mqtt" style="margin-right: -5px"> MQTT </label>
+                <input type="checkbox" id="bmd-sidebar-adapter">
+                <label for="bmd-sidebar-adapter" style="margin-right: -5px"> Sim Adapter </label>
+            </div>
         </div>
         <table id="bmd-sidebar-table" class="sidebar-table">
             <tr id="tr-bmd-status">
@@ -118,10 +131,10 @@
                 <th>#connectors:</th>
                 <td>0</td>
             </tr>
-            <tr>
+            <!--<tr>
                 <th><hr/></th>
                 <td><hr/></td>
-            </tr>
+            </tr>-->
             <tr id="tr-bmd-mqttcount">
                 <th>MQTT Tx:</th>
                 <td>0</td>
@@ -129,18 +142,13 @@
        </table>
     </div>
 </div>
-<!--
-<input type="checkbox" id="server-sidebar-transmit" onclick="" class="pause-icon">
-<label for="cv-sidebar-pause" style="margin-right: -5px"> &nbsp; </label>
-<input type="checkbox" id="server-sidebar-simulate" onclick="" class="pause-icon">
-<label for="cv-sidebar-pause" style="margin-right: -5px"> &nbsp; </label>
--->
+<!--<hr/>-->
 <h3>Server</h3>
 <hr/>
 <div class="sidebar-group">
     <div id="server-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
-        <div class="buttonset">
+        <div class="buttonset sidebar-controls">
             <button class="power-text" onclick="shutdown()"> Shutdown Server </button>
         </div>
         <table id="server-sidebar-table" class="sidebar-table">
