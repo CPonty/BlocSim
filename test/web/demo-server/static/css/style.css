@@ -344,7 +344,7 @@ hr {
 
 .ui-menu { 
 	position: absolute; 
-	width: 55px; 
+	width: auto; 
 	background: #f0f2f7;
 }
 .skinny-button {
@@ -358,6 +358,9 @@ hr {
 .unhyperlink:visited {color: black;}
 .unhyperlink:hover {color: black;} 
 .unhyperlink:active {color: black;}
+.highz-1 {
+	z-index: 1001;
+}
 
 #sidebar-collapsebtn {
 	position:fixed; 

@@ -20,6 +20,8 @@ import tornado.ioloop
 import tornado.web
 import sockjs.tornado
 import logging
+from PIL import Image
+import StringIO
 
 #======================================================================
 
@@ -217,6 +219,7 @@ class Webcam(object):
     FPS_OFF = 15
     FPS_RECORD_LEN = 20
     FPS_UPDATE_INTERVAL = 1
+    AUTO_CONNECT = True
 
     resolutions = [480, 720, 1080]
 
@@ -228,9 +231,11 @@ class Webcam(object):
         self.frameTimes = deque([0]*self.FPS_RECORD_LEN)
         self.fpsLimit = self.FPS_OFF
 
+        self.auto_connect = Webcam.AUTO_CONNECT
         self.cam = None
 
         self.frame = C.zeros(depth=3)
+        #self.frameAsJpeg = None
         self.frameN = 1
         self.frameW = C.minW
         self.frameH = C.minH
@@ -246,8 +251,11 @@ class Webcam(object):
         self.stopEvent = Event()
         self.stopEvent.clear()
 
-    def start(self):
-        self.cam = cv2.VideoCapture(0)
+    def start(self, **args):
+        if 'auto_connect' in args:
+            self.auto_connect = args['auto_connect']
+        if self.auto_connect:
+            self.cam = cv2.VideoCapture(0)
         self.cvThread.start()
         self.timerThread.start()
         self.captureEvent.set()
@@ -257,7 +265,8 @@ class Webcam(object):
         self.stopEvent.set()     # end timer loop
         self.captureEvent.set()  # unblock capture loop
         W.cvThread.join()
-        W.cam.release()
+        if self.cam:
+            W.cam.release()
         cv2.destroyAllWindows()
 
     def fps_update(self):
@@ -275,17 +284,21 @@ class Webcam(object):
             if G.DBG_LOCK: print "cv_loop wait camLock... ",
             with G.camLock:
                 if G.DBG_LOCK: print "using lock"
-                ret, f = self.cam.read()
-                self.frameRawH, self.frameRawW = f.shape[:2]
+                if self.cam:
+                    ret, f = self.cam.read()
+                    self.frameRawH, self.frameRawW = f.shape[:2]
             if self.stopEvent.isSet(): break
             if G.DBG_LOCK: print "cv_loop wait frameLock... ",
             with G.frameLock:
                 if G.DBG_LOCK: print "using lock"
-                self.frameRaw = f.copy()
-                #
-                cv2.imwrite('frame.jpg', f)
-                #
-                self.fps_update()
+                if self.cam:
+                    self.frameRaw = f.copy()
+                    #
+                    #ret, frameAsJpeg = cv2.imencode(".jpg", frameRGB)
+                    #self.frameAsJpeg = frameAsJpeg
+                    #cv2.imwrite('static/images/frame.jpg', f)
+                    #
+                    self.fps_update()
             self.captureEvent.wait()
             self.captureEvent.clear()
             if self.stopEvent.isSet(): break
@@ -391,20 +404,26 @@ class ShutdownHandler(tornado.web.RequestHandler):
         self.write('Server shutdown at '+str(datetime.datetime.now()))
         WS.stop()
 
-#
-#TODO
-#
 class FrameHandler(tornado.web.RequestHandler):
     """Serve the last webcam frame (one-off image)"""
     def get(self):
-        self.render('index.html')
+        #self.redirect("/static/images/frame.jpg")
+        self.set_header('Content-type', 'image/jpg')
+        with G.frameLock:
+            rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
+            jpeg = Image.fromarray(rgb)
+            ioBuf = StringIO.StringIO()
+            jpeg.save(ioBuf, 'JPEG')
+            ioBuf.seek(0)
+            self.write(ioBuf.read())
+        self.finish()
 
 #======================================================================
 
 if __name__ == "__main__":
 
     # Webcam
-    #W.start()
+    W.start(auto_connect=True)
 
     # Webserver
     WS.handlers = [
@@ -423,7 +442,7 @@ if __name__ == "__main__":
 
     # Cleanup
     print "Cleanup"
-    #W.stop()
+    W.stop()
 
 #======================================================================
 """

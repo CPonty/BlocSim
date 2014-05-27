@@ -75,6 +75,7 @@ $(function() {
   */
 
   /* Bind some click events */
+
   // for each accordion hyperlink, hide/show the matching div
   // can use -sidebar-group for the whole block, or just
   // -sidebar-table to preserve the control bar
@@ -135,14 +136,20 @@ $(function() {
 
   // setup the dropdown menus
   $( "#cv-sidebar-resolution-dropdown" ).button().click(function() { //dropdownbtn
-    var menu = $(this).parent().next().show().position({ //theOptionsListDiv
-      my: "left top",
-      at: "left bottom",
-      of: this
-    });
-    $( document ).one( "click", function() {
-      menu.hide();
-    });
+    if (! (typeof window.activemenu === 'undefined') ) {
+      window.activemenu.hide();
+      delete window.activemenu;
+    } else {
+      window.activemenu = $(this).parent().next().show().position({ //theOptionsListDiv
+        my: "left top",
+        at: "left bottom",
+        of: this
+      });
+      $(document).one( "click", function() {
+        window.activemenu.hide();
+        delete window.activemenu;
+      });
+    }
     return false;
   }).parent().buttonset().next().hide().menu();
 
