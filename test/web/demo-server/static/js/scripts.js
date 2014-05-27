@@ -1,4 +1,5 @@
 
+/* UI events */
 function shutdown() {
   $.ajax({
     url : "/down",
@@ -9,3 +10,7 @@ function shutdown() {
     }
   });
 }
+
+$(function() {
+
+});

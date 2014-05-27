@@ -527,4 +527,6 @@ Nice-to-have:
     - distortion correction
         - red dots on corners, autodetect largest 4 red circles above threshold
         - use rectangle to auto-adjust
+    - javascript: track bandwidth
+        - timer displays I/O for each socket in KB/sec (simple sum of message sizes read every x ms)
 """
