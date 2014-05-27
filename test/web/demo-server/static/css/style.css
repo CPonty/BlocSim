@@ -23,7 +23,7 @@ body {
 	font-size: 67.5%;
 	/*background-color: #e7e8ef;*/
 	background-color: white;
-	/*overflow: hidden;*/
+	overflow: hidden;
 	height: 100% auto;
 }
 .top {
@@ -44,11 +44,13 @@ body {
     left: 0;
     top: 5em;
     bottom: 0;
-    width: 26em;
+    width: 27em;
     background-color: #e7e8ef;
     box-shadow: 5px 5px 5px #cfcfcf;
     /*overflow: auto;*/
     padding: 1.5em;
+    padding-right: 0.5em;
+    padding-top: 2.0em;
 }
 .right {
 	overflow-y: auto;
@@ -114,8 +116,9 @@ body {
 	position: fixed;
 	top: 2em;
 	left: 45em;
-	width: auto;
+	width: 40em;
 	z-index: 9999;
+	overflow: visible;
 }
 .embedded-scrollable {
 	width: auto;
@@ -169,7 +172,7 @@ hr {
 } 
 #tabs .ui-tabs-nav { 
     background: transparent; 
-    border-width: 0px 0px 1px 0px; 
+    border-width: 0px 0px 0px 0px; 
     -moz-border-radius: 0px; 
     -webkit-border-radius: 0px; 
     border-radius: 0px; 
@@ -328,13 +331,41 @@ hr {
 }
 .sidebar-table th {
 	text-align: right;
-	padding-right: 0.5em;
+	padding-right: 1em;
+}
+
+.sim-textspan {
+	min-height: 3em;
+	margin-bottom: 3em;
+	margin-top: 1.5em;
+	margin-left: 1.5em;
+	width: auto;
 }
 
 .ui-menu { 
 	position: absolute; 
-	width: 60px; 
+	width: 55px; 
 	background: #f0f2f7;
+}
+.skinny-button {
+	margin-right: -10px !important;
+}
+.not-button {
+	cursor: default;
+}
+.unhyperlink {text-decoration: none;}
+.unhyperlink:link {color: black;}
+.unhyperlink:visited {color: black;}
+.unhyperlink:hover {color: black;} 
+.unhyperlink:active {color: black;}
+
+#sidebar-collapsebtn {
+	position:fixed; 
+	width:1em; 
+	left:25.5em; 
+	top:45%; 
+	height:10%; 
+	z-index:1000;
 }
 
 .vert-textmiddle {

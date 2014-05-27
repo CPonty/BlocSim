@@ -1,15 +1,21 @@
 <!--<hr/>-->
-<h3> Webcam </h3>
+<a href="#" id="webcam-sidebar-accordion-link" class="custom-accordion unhyperlink">
+    <h3>
+        Webcam
+    </h3>
+</a>
 <hr/>
-<div class="sidebar-group">
+<div id="webcam-sidebar-group" class="sidebar-group">
     <div id="webcam-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
-                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-activated" class="transferthick-e-w-icon" checked="1">
-                <label for="webcam-sidebar-activated" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-receiving" class="play-icon" checked="1">
+                <label for="webcam-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
                 <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-paused" class="pause-icon">
                 <label for="webcam-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-stopped" class="stop-icon">
+                <label for="webcam-sidebar-stopped" style="margin-right: -5px"> &nbsp; </label>
                 <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-disconnect" class="close-icon">
                 <label for="webcam-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
             </div>
@@ -21,11 +27,13 @@
             <tr id="tr-webcam-status">
                 <th>Status:</th>
                 <!--<td>No webcam connected</td>-->
-                <td>Connected (2:33:05 AM)</td>
+                <!--<td>Connected (2:33:05 AM)</td>-->
+                <td>Connecting...</td>
             </tr>
             <tr id="tr-webcam-framesize">
                 <th>Resolution:</th>
-                <td>? x ?</td>
+                <!--<td>? x ?</td>-->
+                <td>?</td>
             </tr>
             <tr>
                 <th><hr/></th>
@@ -33,36 +41,44 @@
             </tr>
             <tr id="tr-webcam-fps">
                 <th>FPS:</th>
-                <td>0.0</td>
+                <!--<td>0.0</td>-->
+                <td>?</td>
             </tr>
        </table>
     </div>
 </div>
 <!--<hr/>-->
-<h3> Image Processing </h3>
+<a href="#" id="cv-sidebar-accordion-link" class="custom-accordion unhyperlink">
+    <h3>
+        Image Processing
+    </h3>
+</a>
 <hr/>
-<div class="sidebar-group">
+<div id="cv-sidebar-group" class="sidebar-group">
     <div id="cv-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
-                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-receiving" class="transferthick-e-w-icon" checked="1">
+                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-receiving" class="play-icon" checked="1">
                 <label for="cv-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
                 <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-paused" class="pause-icon">
                 <label for="cv-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-stopped" class="stop-icon">
+                <label for="cv-sidebar-stopped" style="margin-right: -5px"> &nbsp; </label>
                 <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-disconnect" class="close-icon">
                 <label for="cv-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
             </div>
             <div class="sidebar-right">
                 <div>
-                    <button id="cv-sidebar-resolution-label">Quality: (native)</button>
+                    <div class="button not-button skinny-button">Quality:</div>
+                    <button id="cv-sidebar-resolution-label" class="skinny-button">(max)</button>
                     <button id="cv-sidebar-resolution-dropdown" class="triangle-1-s-icon"> &nbsp; </button>
                 </div>
                 <ul>
                     <li><a href="#">480p</a></li>
                     <li><a href="#">720p</a></li>
                     <li><a href="#">1080p</a></li>
-                    <li><a href="#">(native)</a></li>
+                    <li><a href="#">(max)</a></li>
                 </ul>
             </div>
         </div>
@@ -70,11 +86,13 @@
             <tr id="tr-cv-status">
                 <th>Status:</th>
                 <!--<td>Not connected to websocket</td>-->
-                <td>Connected (2:33:05 AM)</td>
+                <!--<td>Connected (2:33:05 AM)</td>-->
+                <td>Connecting...</td>
             </tr>
             <tr id="tr-cv-bandwidth">
                 <th>Socket Tx:</th>
-                <td>0.0 KB/s</td>
+                <!--<td>0.0 KB/s</td>-->
+                <td>? KB/s</td>
             </tr>
             <tr>
                 <th><hr/></th>
@@ -82,23 +100,30 @@
             </tr>
             <tr id="tr-cv-framecount">
                 <th>Frames Rx:</th>
-                <td>0</td>
+                <!--<td>0</td>-->
+                <td>?</td>
             </tr>
        </table>
     </div>
 </div>
 <!--<hr/>-->
-<h3> BMD/Communication </h3>
+<a href="#" id="bmd-sidebar-accordion-link" class="custom-accordion unhyperlink">
+    <h3>
+        BMD/Communication
+    </h3>
+</a>
 <hr/>
-<div class="sidebar-group">
+<div id="bmd-sidebar-group" class="sidebar-group">
     <div id="bmd-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
-                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-receiving" class="transferthick-e-w-icon" checked="1">
+                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-receiving" class="play-icon" checked="1">
                 <label for="bmd-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
                 <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-paused" class="pause-icon">
                 <label for="bmd-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
+                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-stopped" class="stop-icon">
+                <label for="bmd-sidebar-stopped" style="margin-right: -5px"> &nbsp; </label>
                 <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-disconnect" class="close-icon">
                 <label for="bmd-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
             </div>
@@ -106,18 +131,20 @@
                 <input type="checkbox" id="bmd-sidebar-mqtt" checked="1">
                 <label for="bmd-sidebar-mqtt" style="margin-right: -5px"> MQTT </label>
                 <input type="checkbox" id="bmd-sidebar-adapter">
-                <label for="bmd-sidebar-adapter" style="margin-right: -5px"> Sim Adapter </label>
+                <label for="bmd-sidebar-adapter" style="margin-right: -5px"> Simulation </label>
             </div>
         </div>
         <table id="bmd-sidebar-table" class="sidebar-table">
             <tr id="tr-bmd-status">
                 <th>Status:</th>
                 <!--<td>Not connected to websocket</td>-->
-                <td>Connected (2:33:05 AM)</td>
+                <!--<td>Connected (2:33:05 AM)</td>-->
+                <td>Connecting...</td>
             </tr>
             <tr id="tr-bmd-bandwidth">
                 <th>Socket Rx/Tx:</th>
-                <td>0.0 KB/s</td>
+                <td>? KB/s</td>
+                <!--<td>0.0 KB/s</td>-->
             </tr>
             <tr>
                 <th><hr/></th>
@@ -125,11 +152,13 @@
             </tr>
             <tr id="tr-bmd-blockcount">
                 <th>#blocks:</th>
-                <td>0</td>
+                <!--<td>0</td>-->
+                <td>?</td>
             </tr>
             <tr id="tr-bmd-linecount">
                 <th>#connectors:</th>
-                <td>0</td>
+                <td>?</td>
+                <!--<td>0</td>--?
             </tr>
             <!--<tr>
                 <th><hr/></th>
@@ -137,15 +166,20 @@
             </tr>-->
             <tr id="tr-bmd-mqttcount">
                 <th>MQTT Tx:</th>
-                <td>0</td>
+                <!--<td>0</td>-->
+                <td>?</td>
             </tr>
        </table>
     </div>
 </div>
 <!--<hr/>-->
-<h3>Server</h3>
+<a href="#" id="server-sidebar-accordion-link" class="custom-accordion unhyperlink">
+    <h3>
+        Server
+    </h3>
+</a>
 <hr/>
-<div class="sidebar-group">
+<div id="server-sidebar-group" class="sidebar-group">
     <div id="server-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
         <div class="buttonset sidebar-controls">
@@ -155,11 +189,13 @@
             <tr id="tr-server-status">
                 <th>Status:</th>
                 <!--<td>Server shut down ()</td>-->
-                <td>Running (since 2:33:05 AM)</td>
+                <!--<td>Running (since 2:33:05 AM)</td>-->
+                <td>Running</td>
             </tr>
             <tr id="tr-server-uptime">
                 <th>Uptime:</th>
-                <td>1:32</td>
+                <!--<td>1:32</td>-->
+                <td>?</td>
             </tr>
        </table>
     </div>
