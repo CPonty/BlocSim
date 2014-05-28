@@ -1,6 +1,8 @@
 <!--<hr/>-->
-<a href="#" id="webcam-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
+<a href="#!" id="webcam-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
     <h3>
+        <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+             class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
         Webcam
     </h3>
 </a>
@@ -11,16 +13,20 @@
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
                 <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-receiving" class="play-icon" checked="1">
-                <label for="webcam-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
-                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-paused" class="pause-icon">
-                <label for="webcam-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
-                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-stopped" class="stop-icon">
-                <label for="webcam-sidebar-stopped" style="margin-right: -5px"> &nbsp; </label>
+                <label for="webcam-sidebar-receiving" style="margin-right: -5px"> Receive Data </label>
+                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-stopped" class="pause-icon">
+                <label for="webcam-sidebar-stopped" style="margin-right: -5px"> Stop Processing </label>
+                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-ignoring" class="cancel-icon">
+                <label for="webcam-sidebar-ignoring" style="margin-right: -5px"> Ignore Data </label>
+                <!--
                 <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-disconnect" class="close-icon">
                 <label for="webcam-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
+                -->
             </div>
-            <div class="sidebar-right">
-                <button id = "webcam-sidebar-nextbtn" class="refresh-text" onclick=""> Switch Camera </button>
+            <div class="buttonset sidebar-right">
+                <input type="checkbox" id="webcam-sidebar-eject" class="eject-text">
+                <label for="webcam-sidebar-eject" style="margin-right: -5px"> Disconnect </label>
+                <button id="webcam-sidebar-cycle" class="refresh-text"> Detect </button>
             </div>
         </div>
         <table id="webcam-sidebar-table" class="sidebar-table">
@@ -48,8 +54,10 @@
     </div>
 </div>
 <!--<hr/>-->
-<a href="#" id="cv-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
+<a href="#!" id="cv-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
     <h3>
+        <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+             class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
         Image Processing
     </h3>
 </a>
@@ -60,13 +68,15 @@
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
                 <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-receiving" class="play-icon" checked="1">
-                <label for="cv-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
-                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-paused" class="pause-icon">
-                <label for="cv-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
-                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-stopped" class="stop-icon">
-                <label for="cv-sidebar-stopped" style="margin-right: -5px"> &nbsp; </label>
+                <label for="cv-sidebar-receiving" style="margin-right: -5px"> Receive data </label>
+                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-stopped" class="pause-icon">
+                <label for="cv-sidebar-stopped" style="margin-right: -5px"> Stop processing </label>
+                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-ignoring" class="cancel-icon">
+                <label for="cv-sidebar-ignoring" style="margin-right: -5px"> Ignore data </label>
+                <!--
                 <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-disconnect" class="close-icon">
                 <label for="cv-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
+                -->
             </div>
             <div class="sidebar-right">
                 <div>
@@ -75,10 +85,10 @@
                     <button id="cv-sidebar-resolution-dropdown" class="triangle-1-s-icon skinny-button"> &nbsp; </button>
                 </div>
                 <ul class="highz-1">
-                    <li><a href="#">480p</a></li>
-                    <li><a href="#">720p</a></li>
-                    <li><a href="#">1080p</a></li>
-                    <li><a href="#">(max)</a></li>
+                    <li><a href="#!">480p</a></li>
+                    <li><a href="#!">720p</a></li>
+                    <li><a href="#!">1080p</a></li>
+                    <li><a href="#!">(max)</a></li>
                 </ul>
             </div>
         </div>
@@ -107,8 +117,10 @@
     </div>
 </div>
 <!--<hr/>-->
-<a href="#" id="bmd-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
+<a href="#!" id="bmd-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
     <h3>
+        <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+             class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
         BMD/Communication
     </h3>
 </a>
@@ -119,19 +131,21 @@
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
                 <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-receiving" class="play-icon" checked="1">
-                <label for="bmd-sidebar-receiving" style="margin-right: -5px"> &nbsp; </label>
-                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-paused" class="pause-icon">
-                <label for="bmd-sidebar-paused" style="margin-right: -5px"> &nbsp; </label>
-                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-stopped" class="stop-icon">
-                <label for="bmd-sidebar-stopped" style="margin-right: -5px"> &nbsp; </label>
+                <label for="bmd-sidebar-receiving" style="margin-right: -5px"> Receive Data </label>
+                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-stopped" class="pause-icon">
+                <label for="bmd-sidebar-stopped" style="margin-right: -5px"> Stop Processing </label>
+                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-ignoring" class="cancel-icon">
+                <label for="bmd-sidebar-ignoring" style="margin-right: -5px"> Ignore Data </label>
+                <!--
                 <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-disconnect" class="close-icon">
                 <label for="bmd-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
+                -->
             </div>
             <div class="buttonset sidebar-right">
                 <input type="checkbox" id="bmd-sidebar-mqtt" checked="1">
                 <label for="bmd-sidebar-mqtt" style="margin-right: -5px"> MQTT </label>
-                <input type="checkbox" id="bmd-sidebar-adapter">
-                <label for="bmd-sidebar-adapter" style="margin-right: -5px"> Simulation </label>
+                <input type="checkbox" id="bmd-sidebar-simulation" checked="1">
+                <label for="bmd-sidebar-simulation" style="margin-right: -5px"> Simulation </label>
             </div>
         </div>
         <table id="bmd-sidebar-table" class="sidebar-table">
@@ -173,8 +187,10 @@
     </div>
 </div>
 <!--<hr/>-->
-<a href="#" id="server-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
+<a href="#!" id="server-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
     <h3>
+        <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+             class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
         Server
     </h3>
 </a>
@@ -183,8 +199,9 @@
     <div id="server-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
         <div class="buttonset sidebar-controls">
-            <a href="/frame" class="radio-on-text"> View HTTP Webcam </a>
-            <button class="power-text" onclick="shutdown()"> Shutdown </button>
+            <input type="checkbox" id="server-sidebar-eject" class="eject-text">
+            <label for="server-sidebar-eject" style="margin-right: -5px"> Disconnect </label>
+            <button id="server-sidebar-shutdown" class="power-text"> Off </button>
         </div>
         <table id="server-sidebar-table" class="sidebar-table">
             <tr id="tr-server-status">

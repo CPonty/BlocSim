@@ -23,7 +23,7 @@ body {
 	font-size: 67.5%;
 	/*background-color: #e7e8ef;*/
 	background-color: white;
-	overflow: hidden;
+	overflow-x: hidden;
 	height: 100% auto;
 }
 .top {
@@ -67,12 +67,12 @@ body {
     left: 29em;
     top: 5em;
     /*bottom: 0;*/
-    right: 1em;
+    right: 0em;
     overflow-x: hidden;
     /*overflow-y: hidden;*/ /*auto*/    
     /*padding: 1em;*/
     margin: 1em;
-    padding-left: 2em;
+    margin-right: 0em;
     padding-left: 2em;
     /*
     overflow-y: visible;
@@ -97,6 +97,10 @@ body {
 }
 .tab {
 	/*
+	margin-right: 0 !important;
+	padding-right: 0 !important;
+	*/
+	/*
 	float: top;
 	overflow-x: hidden;
 	overflow-y: hidden;
@@ -120,6 +124,17 @@ body {
 	z-index: 9999;
 	overflow: visible;
 }
+.tab-accordion {
+	font-size: 1.2em;
+	font-weight: bold;
+}
+.accordion-arrow {
+    background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important; 
+    width: 1em; 
+    height: 100%; 
+    display: inline-block;
+}
+
 .embedded-scrollable {
 	width: auto;
 	height: 480px;
@@ -180,6 +195,26 @@ hr {
 #tabs .ui-tabs-panel { 
     margin: 0em 0.2em 0.2em 0.2em; 
 }
+
+.toolbar {
+    padding: 4px;
+    display: inline-block;
+  }
+.toolbar-nw {
+	float: left;
+}
+.toolbar-ne {
+	float: right;
+}
+.toolbar-ne button,.toolbar-nw button,
+.toolbar-ne a,     .toolbar-nw a,
+.toolbar-ne input, .toolbar-nw input,
+.toolbar-ne label, .toolbar-nw label {
+	/*border-radius: 0px;*/
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0
+}
+
 /*
 .tab-header-2 { 
     background: transparent; 
@@ -244,6 +279,7 @@ hr {
 .body-right-wrap {
 	float: left;
 	overflow: hidden;
+	padding-right: 0;
 
 	/*position: relative;
 	left: 0em;
@@ -263,7 +299,7 @@ hr {
     border: 1px solid #7f7f7f;
     padding: 1em;
     margin-left: 1em;
-    margin-right: 1em;
+    margin-right: 0em;
     margin-bottom: 1em;
     overflow: hidden;
     /*overflow: scroll;*/
@@ -316,7 +352,9 @@ hr {
 	/*
 	position: relative;
 	left: 2em;*/
+	/*float: right;*/
 	float: left;
+	/*margin-right: 1em;*/
 }
 .sidebar-controls {
 	height: 2.5em;
@@ -342,6 +380,12 @@ hr {
 	width: auto;
 }
 
+.toolbar {
+    padding: 0.5em;
+    margin-top: 2em;
+    margin-bottom: 2em;
+    display: inline-block;
+  }
 .ui-menu { 
 	position: absolute; 
 	width: auto; 
@@ -363,6 +407,10 @@ hr {
 }
 .topz-1 {
 	z-index: 2147483601;
+}
+.stay-in-container {
+	width: auto; 
+	max-width: 100%
 }
 
 #sidebar-collapsebtn {

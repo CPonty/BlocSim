@@ -3,8 +3,9 @@ blocsim_vars = {
 	autoexpand_sidebar: false,
 	autoexpand_tabs: true,
 	rpc_path: "/rpc",
-	rpc_debug: true
+	rpc_debug: false,
 	//rpc_url: "http://localhost:8080/rpc"
+	player_fullscreen: false
 };
 
 // ====================================================================
@@ -59,27 +60,46 @@ function rpc_call_gen_all() {
 }
 
 function rpc_call(name, params) {
-	console.log("rpc call");
+	if(typeof(params)==='undefined') params = {};
+
+	if (blocsim_vars.rpc_debug) console.log("rpc call");
 	request = blocsim_rpc.send[name](params);
-	console.log(JSON.stringify(request));
+	if (blocsim_vars.rpc_debug) console.log(JSON.stringify(request));
 }
 
-function rpc_call_test_handler(response) {
+function rpc_call_alert_handler(response) {
         if (response.result)
         	alert(response.result);
         else if (response.error)
-            alert("Search error: " + response.error.message);
+            alert("RPC error: " + response.error.message);
+};
+
+function rpc_call_console_handler(response) {
+        if (response.result)
+        	console.log(response.result);
+        else if (response.error)
+            console.log("RPC error: " + response.error.message);
 };
 // ====================================================================
 
+blocsim_rpc.handle.helloworld = rpc_call_alert_handler;
+blocsim_rpc.handle.echo = rpc_call_alert_handler;
+
+blocsim_rpc.handle.shutdown = rpc_call_alert_handler;
+blocsim_rpc.handle.cycle_webcam = rpc_call_console_handler;
+
+/*
 blocsim_rpc.handle.helloworld = function(response) {
 	console.log("response");
 	console.log(JSON.stringify(response));
 }
+*/
 
 // ====================================================================
 rpc_call_gen_all(); // call after defining all the handlers
 // ====================================================================
+
+//rpc_call("helloworld");
 
 /*
 var url = "http://localhost:8080/rpc";
@@ -102,7 +122,6 @@ console.log("ready to go!");
 //console.log(JSON.stringify(request));
 //$.post(url, JSON.stringify(request), displaySearchResult, "json");
 */
-rpc_call("helloworld", {});
 // make a shutdown() rpc call - nice test
 // fix the ajax call for the image
 	// then swap it with a base64 rpc
@@ -122,8 +141,8 @@ blocsim_rpc.send.shutdown = function() {
 
 // ====================================================================
 
-
 /* UI events */
+/*
 function shutdown() {
   $.ajax({
     url : "/down",
@@ -134,16 +153,62 @@ function shutdown() {
     }
   });
 }
+*/
+
+$(function() {
+
+	$( "#server-sidebar-shutdown" ).click(function() {
+		rpc_call("shutdown");
+	});
 
 
+	$("input[name=webcam-tab-drawsize]:radio").change(function () {
+		alert('drawsize');
+	});
+
+	$("input[name=webcam-sidebar-radio1]:radio").change(function () {
+		alert('webcam-radio-connection');
+	});
+
+	$("input[name=cv-sidebar-radio1]:radio").change(function () {
+		alert('cv-radio-connection');
+	});
+
+	$("input[name=bmd-sidebar-radio1]:radio").change(function () {
+		alert('bmd-radio-connection');
+	});
+
+
+	$('#webcam-sidebar-eject:checkbox').change(function() {
+		$( "#webcam-sidebar-cycle" ).attr("disabled", this.checked);
+		alert('webcam-checked-eject');
+	}); 
+
+	$('#bmd-sidebar-mqtt:checkbox').change(function() {
+		alert('bmd-checked-mqtt');
+	}); 
+
+	$('#bmd-sidebar-simulation:checkbox').change(function() {
+		alert('bmd-checked-simulation');
+	});
+
+
+	$('#webcam-sidebar-cycle:button').click(function() {
+		//alert('webcam-button-cycle');
+		rpc_call("cycle_webcam");
+	}); 
+
+
+
+});
+
+// ====================================================================
 
 /* Background tasks */
 
 function blocsim_event_loop() {
 	//window.setInterval(blocsim_event_loop, 100);
 }
-
-console.log(window.blocsim);
 
 $(function() {
 	blocsim_event_loop();

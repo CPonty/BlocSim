@@ -20,7 +20,8 @@ $(function() {
   var button_icons = [
     "pause", "close", "refresh", "power", "transferthick-e-w",
     "triangle-1-s", "stop", "play", "triangle-1-w", "triangle-1-e",
-    "radio-on"
+    "radio-on", "cancel", "eject", "arrow-4-diag", "extlink", "arrow-4",
+    "triangle-1-n", "arrow-2-ne-sw"
   ];
   for (var i=0; i<button_icons.length; i++) {
     $( "."+button_icons[i]+"-text" ).button({
@@ -76,7 +77,7 @@ $(function() {
   */
 
   // shrink all the 'skinny' buttons
-  $( ".skinny-button" ).animate({width: "-=5"});
+  $( ".skinny-button" ).animate({width: "-=2"});
 
   // do/don't start accordions collapsed
   if (blocsim_vars.autoexpand_sidebar==false)
@@ -85,7 +86,7 @@ $(function() {
     $( ".tab-accordion-area" ).hide();
 
 
-  /* Bind some click events */
+  /* Bind some animation-related click events */
 
   // for each accordion hyperlink, hide/show the matching div
   // can use -sidebar-group for the whole block, or just
@@ -93,8 +94,15 @@ $(function() {
   $( ".sidebar-accordion" ).click(function() {
     var name = this.id.toString().split("-")[0];
     $( "#"+name+"-sidebar-table" ).toggle();
+    var arrow = $(this).find(">:first-child").find(">:first-child");
+    arrow.toggleClass("ui-icon-triangle-1-n ui-icon-triangle-1-s");
+    console.log(arrow);
+    //$(this).find(">:first-child").find(">:first-child")
+      //.toggleClass("icon-triangle-1-s icon-triangle-1-n");
   });
-    $( ".tab-accordion" ).click(function() {
+  //element.find(">:first-child").toggleClass("redClass");
+  //$("i",this).toggleClass("icon-circle-arrow-up icon-circle-arrow-down");
+  $( ".tab-accordion" ).click(function() {
     var name = this.id.toString().split("-")[0];
     $( "#"+name+"-tab-panel" ).toggle();
   });
@@ -146,7 +154,7 @@ $(function() {
   
   /* UI events */
 
-  // setup the dropdown menus
+  // setup some dropdown menus
   $( "#cv-sidebar-resolution-dropdown" ).button().click(function() { //dropdownbtn
     if (! (typeof window.activemenu === 'undefined') ) {
       window.activemenu.hide();

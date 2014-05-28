@@ -1,5 +1,5 @@
 Webcam
-<br/><br/><br/>
+<br/><br/>
 <!--<img style="border: 2px solid #7f7f7f;" src="" width="1920" height="1080"><br/>-->
 
 <!--<div class="button not-button">Hi!</div>-->
@@ -16,19 +16,69 @@ Webcam
     <button class="button">3</button>
 </div>
 -->
+<div style="float: left">
+    <div class="stay-in-container">
+        <div class="buttonset toolbar-nw">
+            <button class="button">A</button>
+            <button class="button skinny-button">B</button>
+            <div class="button not-button skinny-button">Hi!</div>
+            <a>B</a>
+        </div>
+        <div style="margin-right:5px" class="buttonset toolbar-ne">
+            <input type="radio" name="webcam-tab-drawsize" id="webcam-tab-draw-scrollable" class="button arrow-4-icon" checked="1">
+            <label for="webcam-tab-draw-scrollable" style="margin-right: -5px"> Scroll </label>
+            <input type="radio" name="webcam-tab-drawsize" id="webcam-tab-draw-stretch" class="button arrow-2-ne-sw-icon">
+            <label for="webcam-tab-draw-stretch" style="margin-right: -5px"> Stretch </label>
+            <input type="radio" name="webcam-tab-drawsize" id="webcam-tab-draw-max" class="button extlink-icon">
+            <label for="webcam-tab-draw-max" style="margin-right: -5px"> Stretch </label>
+        </div>
+    </div>
+    <!--
+    <div id="webcam-tab-toolbar-nw" class="toolbar-nw ui-corner-all">
+        <button></button>
+        <button></button>
+    </div>
+    -->
+    <!--
+    <div id="webcam-tab-toolbar-ne" class="buttonbar">
+        <button id="webcam-tab-wide" style="float: right" class="arrow-4-diag-icon"> Widescreen </button>
+        <button id="webcam-tab-fullscreen" style="float: right" class="arrow-4-diag-icon"> Fullscreen </button>
+    </div>
+    -->
+    <!--<div style="clear:both"> &nbsp; </div>-->
+    <!--<br/>-->
+    <div id="webcam-tab-frame-container">
+        <iframe name="webcam-tab-frame-iframe" src="/ajax" frameborder="0" scrolling="auto" width="1920" height="1080" marginwidth="0" marginheight="0" >
+        </iframe>
+        <!--<img id='frame' src='frame.jpg' class="sidebar-left" style="max-width: 100%; max-height: 100%">-->
+    </div>
+    <br/>
+</div>
+<div style="clear:both"> &nbsp; </div>
+<br/>
 
-<a href="#" id="calib-tab-accordion-link" class="tab-accordion unhyperlink">
-    <h3>
-        Calibration Panel (click to expand):
-    </h3>
+<a href="#!" id="calib-tab-accordion-link" class="tab-accordion unhyperlink">
+    <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+         class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
+    Calibration Panel:
 </a>
 <hr/>
 <div id="calib-tab-panel" class="tab-accordion-area textspan">
-    (no controls yet)
+    (add controls) | save frame (w/ timestamp) (rpc) (save without on server shutdown)
+</div>
+<a href="#!" id="test-tab-accordion-link" class="tab-accordion unhyperlink">
+    <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+         class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
+    Test Panel:
+</a>
+<hr/>
+<div id="test-tab-panel" class="tab-accordion-area textspan">
+    <a href="/ajax" class="radio-on-text"> AJAX Polling Stream </a>
+    <br/><br/>
+    (add controls)
 </div>
 <!--div.button.not-button.ui-button.ui-widget.ui-state-default.ui-corner-all.ui-button-text-only-->
 <script>
     $( function() {
-        //$( ".ui-button" ).button();
     });
 </script>

@@ -27,7 +27,7 @@ $(function() {
 
     function loaded() {
         if ( do_stream ) {
-            reload();
+            window.setTimeout(reload, 20);
         }
     }
 
@@ -49,7 +49,7 @@ $(function() {
     </div>
     <br/>
     <div id="frame-container">
-        <img id='frame' src='frame.jpg'>
+        <img id='frame' src='frame.jpg' style="max-width: 100%; max-height: 100%">
     </div>
 </body>
 </html>

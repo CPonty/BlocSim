@@ -217,11 +217,12 @@ C = CV()
 
 
 class Webcam(object):
-    FPS_ON = 4
-    FPS_OFF = 10
+    FPS_ON = 30  # limit FPS when processing is on
+    FPS_OFF = 30
     FPS_RECORD_LEN = 20
     FPS_UPDATE_INTERVAL = 1
     AUTO_CONNECT = True
+    FORCE_RESIZE = False
 
     resolutions = [480, 720, 1080]
 
@@ -296,9 +297,12 @@ class Webcam(object):
             with G.frameLock:
                 if G.DBG_LOCK: print "using lock"
                 if self.cam:
-                    self.frameRaw = f   # removed the .copy() - nobody's going to modify f,
-                                        # and it will be discarded next frame anyway.
-                                        # safe enough to directly reference like this
+                    self.frameRaw = f
+                    if self.FORCE_RESIZE:
+                        self.frameRaw = C.resize_fixed(f)
+                    """ removed the .copy() - nobody's going to modify f,
+                        and it will be discarded next frame anyway.
+                        safe enough to directly reference like this"""
                     #
                     #ret, frameAsJpeg = cv2.imencode(".jpg", frameRGB)
                     #self.frameAsJpeg = frameAsJpeg
@@ -432,7 +436,7 @@ class ShutdownHandler(tornado.web.RequestHandler):
 
 class FrameViewer(tornado.web.RequestHandler):
     def get(self):
-        self.render('frame.html')
+        self.render('ajax.html')
         #self.set_status(200)
         #self.set_header('Content-type','text/html')
         #self.write("<html><head></head><body>")
@@ -459,6 +463,19 @@ class RPCHandler(JSONRPCHandler):
 
     def helloworld(self, *args):
         return "Hello world!"
+
+    def echo(self, s):
+        return s
+
+    def shutdown(self):
+        WS.stop()
+        return 'Server shutdown at '+str(datetime.datetime.now())
+
+    def cycle_webcam(self):
+        #
+        #TODO disregard if camera not currently running
+        #
+        return 'Switching to most recently connected video source...'
 """
     def add(self, x, y):
         return x+y
@@ -466,12 +483,6 @@ class RPCHandler(JSONRPCHandler):
     def ping(self, obj):
         return obj
 
-    def down(self):
-        WS.stop()
-        return str('Server shutdown at '+str(datetime.datetime.now()))
-
-    def post(self):
-        return "yall just got posted"
 """
 #======================================================================
 
@@ -488,8 +499,9 @@ if __name__ == "__main__":
         #(r"/down", ShutdownHandler),
         #(r'/rpc/(.*)', HelloHandler),
         (r'/rpc', RPCHandler),
-        (r"/frame", FrameViewer),
+        (r"/ajax", FrameViewer),
         (r"/frame.jpg", FrameHandler),
+        (r"/favicon.ico", tornado.web.StaticFileHandler, {'path': WS.static_path}),
         (r"/", IndexHandler)
     ]
 
@@ -606,4 +618,140 @@ Nice-to-have:
         - use rectangle to auto-adjust
     - javascript: track bandwidth
         - timer displays I/O for each socket in KB/sec (simple sum of message sizes read every x ms)
+"""
+"""
+Short term:
+    - json config file
+        use it for python too - very valuable, easy to configure both
+    - frame supplied from file
+        - UI: use file browser object - only care about the file name, folder is fixed
+        - cli: first argument
+    - server shutdown
+        - RPC shutdown
+    - set up pub/sub ( blocsim and blocsim/adapters/digital-logic )
+        add 'test with:' strings to the web ui
+    - fast PoC of fabric.js
+    - fast PoC (on streaming page): base64 image via socket
+    - fast PoC (on webcam panel): resizable image
+    - dynamic accordions (walk up to the parent div, just like dropdown menus)
+    - delete a heap of comments to make it more readable
+    - socket basics
+        - server counts as connected again when sockets reconnect
+    - dynamic dropdown menu formatting
+
+    storing config
+
+    sync between ui and server
+        N- when the server goes down, lock the page, otherwise ui elements will go out of sync
+        - when server is down, poll the server
+        - if it responds, refresh the page
+        - ui elements updated by server: RPC adds key-value pairs to a 'server update' keystore
+
+    config save button
+        - RPC to save (server's) json object to file
+    config load on start
+        - server loads it from saved file. if that doesn't exist, it copies it there from the defaults folder
+        - users ask for it when the page loads - add a special handler for it, serve the current state
+
+    frame rate
+        - capture thread always runs at max FPS, but does no work
+        - timer thread sets the FPS for the processing thread
+        - in the processing thread we do the CV (if needed) and pub/sub services
+        - broadcast the currently selected frame and update keystore to evvveryone!
+
+    serving frames
+        ! go async with tornado - http://papercruncher.com/2013/01/15/truly-async-with-tornado/
+            - maybe only for big calls
+        ! replace the weird jpeg socket streaming with /stream/<raw|thumb|cv>.mjpeg[?clientid=<id>]
+            - now everyone can have images (multiple?) easily, in a way controlled by the server
+            - clientid maps to the cv sourceid and max resolution; tells it when to pause
+            - on socket disconnect, set a 'stop' class flag (detect it in the serving loop)
+            - on clientid's websocket disconnect, set the 'stop' flag (actually, poll the value in the loop)
+            - in browser: display in iframe; iframe should start as .jpg and reload as .mjpeg on client connect
+            - sync access to resources with an event and/or RLock
+            - only send the image if the corresponding clientid is set to play
+                - store the event & lock against the websocket
+    actually is MLG ^^^
+    do it first, do it now :D
+
+    now, all the syncing stuff.
+    python
+        - store in RAM - pickleDB *2
+            one is the server state, loaded from file and stored to file
+            one is the 'inbound from clients' queue - cleared every time a socket message is sent (needs RLock)
+        - listen for changes - pypubsub
+            take any special actions needed (including value validation), store by default
+        - use - load all as a python object at the start of the processing loop; everything else done with callback
+    javascript
+        - store in global json object *4
+            one is the client state, loaded from server file then updated by UI and server
+                this only cover stuff synced with the server
+            one is the server outbound set
+                both plain json objects, no callbacks
+
+    ?        // one is the 'inbound from server' queue
+    ?        // one is the 'inbound from self' queue
+            when UI updates, handle the value locally, store it locally and add it to the server outbound queue
+            when server updates, handle the value locally, store it locally, update the UI
+
+            need a value-callbacks set
+
+             - get the list of variables to track (aka, get the keys from the server)
+             - define generic setters and getters by running .each -> defineProperty on the keys
+                setup empty functions: this.property.validate(), this.property.ui()
+                getters: just get the _value from itself
+                setters:    _value = incomingValue
+                            _value = this.property.validate(_value)
+                            if this._send_server: (update the server outbound queue's key, _value)
+                            if this._update_ui: this.property.ui(_value)
+                            client_state.value = _value
+                UI: set_fromui() - add to server queue if not matching global
+                SRV: set_fromserver() - change ui if not matching global
+                [ combine into one 'setter' object ]
+
+                where the value needs validating (UI), define from_ui.<value>.validate
+                where widgets needs updating(SRV), define from_srv.<value>.ui
+
+                now we can create a function for value validation and any extra work in <set>.<value>.ui()
+                ui.fpslimit.validate = function(val) {}
+                ----------------------------------------------------
+
+                simpler (but shitter), avoids loop of ui update -> send -> client receive -> ui update -> ...
+                    server outbound queue
+                        plain set {}
+                    received queue processing
+                        set global values
+
+                        call ui update functions for each (stored in their own set {})
+                    send-to-server loop
+                        scrape all ui values (functions stored in their own set {})
+                        compare to global values
+                        if changed, set global & add to server outbound queue
+
+
+                    local client state:
+                        - load defaults
+
+                ----------------------------------------------------
+                either way, be careful of loops, don't let server updates to UI trigger server sending
+             -
+
+            after startup, ask for the server state (again)
+             - upon getting it we automatically loop through and update UI
+
+       // - listen for changes
+
+    split javascript into more files
+
+    ? keep rpc's - shutdown, switch camera, 'off' and 'pause' buttons on sidebar
+      implement camera threading structure as above
+      implement switch camera
+      run basically everything through the sockets
+        don't send socket data if socketID is null - set null on disconnect
+    ? dialog
+      click events for panel scaling
+      make fabric.js widgets (x2)
+      implement player resizing
+        split expand and contract events for sidebar resize, need to call it when we minimise/maximise
+        iframe dynamically resizes to fit (on window resize, on load, and when the checkbox changes)
 """
