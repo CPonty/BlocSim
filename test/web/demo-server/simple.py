@@ -19,6 +19,8 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import sockjs.tornado
+from tornadorpc.json import JSONRPCHandler
+from tornadorpc import private, start_server
 import logging
 from PIL import Image
 import StringIO
@@ -28,7 +30,7 @@ import StringIO
 
 class Globals(object):
     DBG_LOCK = False
-    DBG_FPS = False
+    DBG_FPS = True
     TEST_CV = False
 
     def __init__(self):
@@ -215,8 +217,8 @@ C = CV()
 
 
 class Webcam(object):
-    FPS_ON = 5
-    FPS_OFF = 15
+    FPS_ON = 4
+    FPS_OFF = 10
     FPS_RECORD_LEN = 20
     FPS_UPDATE_INTERVAL = 1
     AUTO_CONNECT = True
@@ -239,6 +241,7 @@ class Webcam(object):
         self.frameN = 1
         self.frameW = C.minW
         self.frameH = C.minH
+        self.frameRaw = C.zeros(depth=3)
         self.frameRawW = C.minW
         self.frameRawH = C.minH
 
@@ -264,7 +267,8 @@ class Webcam(object):
     def stop(self):
         self.stopEvent.set()     # end timer loop
         self.captureEvent.set()  # unblock capture loop
-        W.cvThread.join()
+        if W.cvThread.is_alive():
+            W.cvThread.join()
         if self.cam:
             W.cam.release()
         cv2.destroyAllWindows()
@@ -292,7 +296,9 @@ class Webcam(object):
             with G.frameLock:
                 if G.DBG_LOCK: print "using lock"
                 if self.cam:
-                    self.frameRaw = f.copy()
+                    self.frameRaw = f   # removed the .copy() - nobody's going to modify f,
+                                        # and it will be discarded next frame anyway.
+                                        # safe enough to directly reference like this
                     #
                     #ret, frameAsJpeg = cv2.imencode(".jpg", frameRGB)
                     #self.frameAsJpeg = frameAsJpeg
@@ -317,19 +323,23 @@ W = Webcam()
 
 
 class WebServer(object):
-    DEFAULT_PORT = 8080
+    DEFAULT_WEB_PORT = 8080
+    #DEFAULT_RPC_PORT = 8081
     SHUTDOWN_TIMEOUT_SEC = 1
     TEMPLATE_PATH = "templates"
     STATIC_PATH = "static"
-    CSS_PATH = "css"
-    JS_PATH = "js"
-    IMAGES_PATH = "images"
+    #CSS_PATH = "css"
+    #JS_PATH = "js"
+    #IMAGES_PATH = "images"
     DEBUG = True
 
-    def __init__(self, **args):
-        self.port = WebServer.DEFAULT_PORT
-        if 'port' in args:
-            self.port = args['port']
+    def __init__(self, **kwargs):
+        self.web_port = WebServer.DEFAULT_WEB_PORT
+        #self.rpc_port = WebServer.DEFAULT_RPC_PORT
+        if 'web_port' in kwargs:
+            self.web_port = kwargs['web_port']
+        #if 'rpc_port' in kwargs:
+        #    self.rpc_port = kwargs['rpc_port']
         self.app = None
         self.server = None
         self.io_loop = None
@@ -338,9 +348,11 @@ class WebServer(object):
         self.root = os.path.dirname(__file__)
         self.template_path = os.path.join(self.root, self.TEMPLATE_PATH)
         self.static_path = os.path.join(self.root, self.STATIC_PATH)
-        self.css_path = os.path.join(self.root, self.CSS_PATH)
-        self.js_path = os.path.join(self.root, self.JS_PATH)
-        self.images_path = os.path.join(self.root, self.IMAGES_PATH)
+        #self.css_path = os.path.join(self.root, self.CSS_PATH)
+        #self.js_path = os.path.join(self.root, self.JS_PATH)
+        #self.images_path = os.path.join(self.root, self.IMAGES_PATH)
+
+        #self.rpcThread = Thread(target=self.rpc_loop)
 
         logging.getLogger().setLevel(logging.DEBUG)
 
@@ -353,17 +365,24 @@ class WebServer(object):
         except KeyboardInterrupt:
             self.io_loop.stop()
 
-    def start(self, **args):
-        if 'port' in args:
-            self.port = args['port']
-        if len(self.handlers)==0:
+    def start(self, **kwargs):
+        if 'web_port' in kwargs:
+            self.web_port = kwargs['web_port']
+        #if 'rpc_port' in kwargs:
+        #    self.web_port = kwargs['rpc_port']
+        if len(self.handlers) == 0:
             logging.warning("no request handlers defined!")
         self.app = tornado.web.Application(
-            self.handlers, static_path=self.static_path,
-            template_path=self.template_path, debug=self.DEBUG
+            self.handlers, debug=self.DEBUG,
+            static_path=self.static_path, template_path=self.template_path
         )
         self.server = tornado.httpserver.HTTPServer(self.app)
-        self.server.listen(self.port)
+        self.server.listen(self.web_port)
+
+        #self.rpcThread.start()
+
+    #def rpc_loop(self):
+    #    start_server(RPCHandler, port=self.rpc_port)
 
     def stop_loop(self):
         now = time()
@@ -394,6 +413,13 @@ class IndexHandler(tornado.web.RequestHandler):
     def get(self):
         self.render('index.html')
 
+class HelloHandler(tornado.web.RequestHandler):
+    def get(self, *args):
+        self.write('howdy :)')
+
+    def post(self, *args):
+        self.write('howdy :)')
+
 class ShutdownHandler(tornado.web.RequestHandler):
     """Remote shutdown server"""
     def get(self):
@@ -404,20 +430,49 @@ class ShutdownHandler(tornado.web.RequestHandler):
         self.write('Server shutdown at '+str(datetime.datetime.now()))
         WS.stop()
 
+class FrameViewer(tornado.web.RequestHandler):
+    def get(self):
+        self.render('frame.html')
+        #self.set_status(200)
+        #self.set_header('Content-type','text/html')
+        #self.write("<html><head></head><body>")
+        #self.write("<a href='/'>Back</a> ")
+        #self.write("<a href='#' onclick='frame.src = \"frame.jpg#\" + new Date().getTime();'>Reload</a>")
+        #self.write("<br/><img id='frame' src='frame.jpg'></body></html>")
+        #self.finish()
+
 class FrameHandler(tornado.web.RequestHandler):
     """Serve the last webcam frame (one-off image)"""
     def get(self):
         #self.redirect("/static/images/frame.jpg")
-        self.set_header('Content-type', 'image/jpg')
         with G.frameLock:
             rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
-            jpeg = Image.fromarray(rgb)
-            ioBuf = StringIO.StringIO()
-            jpeg.save(ioBuf, 'JPEG')
-            ioBuf.seek(0)
-            self.write(ioBuf.read())
+        jpeg = Image.fromarray(rgb)
+        ioBuf = StringIO.StringIO()
+        self.set_header('Content-type', 'image/jpg')
+        jpeg.save(ioBuf, 'JPEG')
+        ioBuf.seek(0)
+        self.write(ioBuf.read())
         self.finish()
 
+class RPCHandler(JSONRPCHandler):
+
+    def helloworld(self, *args):
+        return "Hello world!"
+"""
+    def add(self, x, y):
+        return x+y
+
+    def ping(self, obj):
+        return obj
+
+    def down(self):
+        WS.stop()
+        return str('Server shutdown at '+str(datetime.datetime.now()))
+
+    def post(self):
+        return "yall just got posted"
+"""
 #======================================================================
 
 if __name__ == "__main__":
@@ -430,8 +485,11 @@ if __name__ == "__main__":
         #(r'/js/(.*)',  tornado.web.StaticFileHandler, {'path': WS.js_path}),
         #(r'/css/(.*)', tornado.web.StaticFileHandler, {'path': WS.css_path}),
         #(r'/images/(.*)', tornado.web.StaticFileHandler, {'path': WS.css_path}),
-        (r"/down", ShutdownHandler),
-        (r"/frame", FrameHandler),
+        #(r"/down", ShutdownHandler),
+        #(r'/rpc/(.*)', HelloHandler),
+        (r'/rpc', RPCHandler),
+        (r"/frame", FrameViewer),
+        (r"/frame.jpg", FrameHandler),
         (r"/", IndexHandler)
     ]
 

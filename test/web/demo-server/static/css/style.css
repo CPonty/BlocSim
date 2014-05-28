@@ -55,7 +55,7 @@ body {
 .right {
 	overflow-y: auto;
 	height: auto;
-	min-width: 65em;
+	min-width: 55em; /*65em*/
 	/*padding-bottom: 2em;*/
 }
 .right-wrap {
@@ -78,7 +78,7 @@ body {
     overflow-y: visible;
     height: 100% auto;
     */
-    min-width: 65em;
+    min-width: 55em; /*65em*/
 	/*padding-bottom: 2em;*/
 }
 .tabs {
@@ -334,7 +334,7 @@ hr {
 	padding-right: 1em;
 }
 
-.sim-textspan {
+.textspan {
 	min-height: 3em;
 	margin-bottom: 3em;
 	margin-top: 1.5em;
@@ -348,7 +348,7 @@ hr {
 	background: #f0f2f7;
 }
 .skinny-button {
-	margin-right: -10px !important;
+	margin-right: -4px !important;
 }
 .not-button {
 	cursor: default;
@@ -360,6 +360,9 @@ hr {
 .unhyperlink:active {color: black;}
 .highz-1 {
 	z-index: 1001;
+}
+.topz-1 {
+	z-index: 2147483601;
 }
 
 #sidebar-collapsebtn {

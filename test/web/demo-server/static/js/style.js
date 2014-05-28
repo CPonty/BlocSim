@@ -19,7 +19,8 @@ $(function() {
   // generate icons for buttons with shorthand classnames
   var button_icons = [
     "pause", "close", "refresh", "power", "transferthick-e-w",
-    "triangle-1-s", "stop", "play", "triangle-1-w", "triangle-1-e"
+    "triangle-1-s", "stop", "play", "triangle-1-w", "triangle-1-e",
+    "radio-on"
   ];
   for (var i=0; i<button_icons.length; i++) {
     $( "."+button_icons[i]+"-text" ).button({
@@ -74,18 +75,29 @@ $(function() {
   });
   */
 
+  // shrink all the 'skinny' buttons
+  $( ".skinny-button" ).animate({width: "-=5"});
+
+  // do/don't start accordions collapsed
+  if (blocsim_vars.autoexpand_sidebar==false)
+    $( ".sidebar-table" ).hide();
+  if (blocsim_vars.autoexpand_tabs==false)
+    $( ".tab-accordion-area" ).hide();
+
+
   /* Bind some click events */
 
   // for each accordion hyperlink, hide/show the matching div
   // can use -sidebar-group for the whole block, or just
   // -sidebar-table to preserve the control bar
-  $( ".custom-accordion" ).click(function() {
+  $( ".sidebar-accordion" ).click(function() {
     var name = this.id.toString().split("-")[0];
     $( "#"+name+"-sidebar-table" ).toggle();
   });
-  // do/don't start collapsed
-  if (false)
-    $( ".sidebar-table" ).hide();
+    $( ".tab-accordion" ).click(function() {
+    var name = this.id.toString().split("-")[0];
+    $( "#"+name+"-tab-panel" ).toggle();
+  });
 
   // setup the collapse/expand button for the sidebar
   $( "#sidebar-collapsebtn" ).button().click(function() {
@@ -141,8 +153,8 @@ $(function() {
       delete window.activemenu;
     } else {
       window.activemenu = $(this).parent().next().show().position({ //theOptionsListDiv
-        my: "left top",
-        at: "left bottom",
+        my: "right top",
+        at: "right bottom",
         of: this
       });
       $(document).one( "click", function() {

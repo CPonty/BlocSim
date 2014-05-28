@@ -1,5 +1,5 @@
 <!--<hr/>-->
-<a href="#" id="webcam-sidebar-accordion-link" class="custom-accordion unhyperlink">
+<a href="#" id="webcam-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
     <h3>
         Webcam
     </h3>
@@ -48,7 +48,7 @@
     </div>
 </div>
 <!--<hr/>-->
-<a href="#" id="cv-sidebar-accordion-link" class="custom-accordion unhyperlink">
+<a href="#" id="cv-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
     <h3>
         Image Processing
     </h3>
@@ -68,13 +68,13 @@
                 <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-disconnect" class="close-icon">
                 <label for="cv-sidebar-disconnect" style="margin-right: -5px"> &nbsp; </label>
             </div>
-            <div class="sidebar-right highz-1">
+            <div class="sidebar-right">
                 <div>
                     <div class="button not-button skinny-button">Quality:</div>
                     <button id="cv-sidebar-resolution-label" class="skinny-button">(max)</button>
-                    <button id="cv-sidebar-resolution-dropdown" class="triangle-1-s-icon"> &nbsp; </button>
+                    <button id="cv-sidebar-resolution-dropdown" class="triangle-1-s-icon skinny-button"> &nbsp; </button>
                 </div>
-                <ul>
+                <ul class="highz-1">
                     <li><a href="#">480p</a></li>
                     <li><a href="#">720p</a></li>
                     <li><a href="#">1080p</a></li>
@@ -107,7 +107,7 @@
     </div>
 </div>
 <!--<hr/>-->
-<a href="#" id="bmd-sidebar-accordion-link" class="custom-accordion unhyperlink">
+<a href="#" id="bmd-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
     <h3>
         BMD/Communication
     </h3>
@@ -173,7 +173,7 @@
     </div>
 </div>
 <!--<hr/>-->
-<a href="#" id="server-sidebar-accordion-link" class="custom-accordion unhyperlink">
+<a href="#" id="server-sidebar-accordion-link" class="sidebar-accordion unhyperlink">
     <h3>
         Server
     </h3>
@@ -183,7 +183,8 @@
     <div id="server-indicator" class="circle sidebar-left"> &nbsp; </div>
     <div class="sidebar-right">
         <div class="buttonset sidebar-controls">
-            <button class="power-text" onclick="shutdown()"> Shutdown Server </button>
+            <a href="/frame" class="radio-on-text"> View HTTP Webcam </a>
+            <button class="power-text" onclick="shutdown()"> Shutdown </button>
         </div>
         <table id="server-sidebar-table" class="sidebar-table">
             <tr id="tr-server-status">
