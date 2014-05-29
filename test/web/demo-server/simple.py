@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 from time import time, sleep
 import datetime
+import tornado.gen
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
@@ -24,18 +25,70 @@ from tornadorpc import private, start_server
 import logging
 from PIL import Image
 import StringIO
+import shutil
+import pickledb
 
 #======================================================================
 
 
 class Globals(object):
     DBG_LOCK = False
-    DBG_FPS = True
+    DBG_DB = True
+    DBG_FPS = False
+    LOG_LEVEL = logging.DEBUG
+
     TEST_CV = False
 
+    PATH_DEFAULTS = "config/defaults.db"
+    PATH_CONFIG = "config/config.db"
+    PERSISTENCE = True
+    SYNC_WITH_DISK = False
     def __init__(self):
         self.camLock = RLock()
         self.frameLock = RLock()
+        self.db = None
+        logging.getLogger().setLevel(Globals.LOG_LEVEL)
+
+        if not os.path.isdir("config"):
+            logging.error("/config folder missing. Exiting...")
+            exit(1)
+        if not os.path.exists(Globals.PATH_DEFAULTS):
+            logging.error(Globals.PATH_DEFAULTS + " file missing. Exiting...")
+            exit(1)
+        if (not Globals.PERSISTENCE) or (not os.path.exists(Globals.PATH_CONFIG)):
+            shutil.copyfile(Globals.PATH_DEFAULTS, Globals.PATH_CONFIG)
+
+        self.load_db()
+        if len(self.db.db) == 0:
+            self.load_defaults()
+        if len(self.db.db) == 0:
+            self.gen_defaults()
+            #self.save_defaults()
+            self.save_db()
+
+    def load_db(self):
+        self.db = pickledb.load(Globals.PATH_CONFIG, Globals.SYNC_WITH_DISK)
+        if Globals.DBG_DB: logging.info("db: load_db ({} items loaded)".format(len(self.db.db)))
+
+    def load_defaults(self):
+        self.db = pickledb.load(Globals.PATH_DEFAULTS, Globals.SYNC_WITH_DISK)
+        if Globals.DBG_DB: logging.info("db: load_defaults ({} items loaded)".format(len(self.db.db)))
+
+    def save_db(self):
+        self.db.dump()
+        if Globals.DBG_DB: logging.info("db: save_db ({} items saved)".format(len(self.db.db)))
+
+    def save_defaults(self):
+        if Globals.DBG_DB: logging.info("db: save_defaults ...")
+        db_defaults = pickledb.load(Globals.PATH_DEFAULTS, False)
+        db_defaults.db = self.db.db
+        db_defaults.dump()
+
+    def gen_defaults(self):
+        #
+        #TODO generate db
+        #
+        if Globals.DBG_DB: logging.info("db: gen_defaults ({} items created)".format(len(self.db.db)))
 
 G = Globals()
 
@@ -347,6 +400,7 @@ class WebServer(object):
         self.app = None
         self.server = None
         self.io_loop = None
+        self.io_loop_thread = Thread(target=self.io)
         self.handlers = []
         self.shutdown_deadline = time()
         self.root = os.path.dirname(__file__)
@@ -358,16 +412,12 @@ class WebServer(object):
 
         #self.rpcThread = Thread(target=self.rpc_loop)
 
-        logging.getLogger().setLevel(logging.DEBUG)
-
     def io(self):
         if self.server is None:
             logging.warning("IO loop started before server")
         self.io_loop = tornado.ioloop.IOLoop.instance()
-        try:
-            self.io_loop.start()
-        except KeyboardInterrupt:
-            self.io_loop.stop()
+        logging.info("IO loop starting")
+        self.io_loop.start()
 
     def start(self, **kwargs):
         if 'web_port' in kwargs:
@@ -382,6 +432,7 @@ class WebServer(object):
         )
         self.server = tornado.httpserver.HTTPServer(self.app)
         self.server.listen(self.web_port)
+        self.io_loop_thread.start()
 
         #self.rpcThread.start()
 
@@ -434,7 +485,7 @@ class ShutdownHandler(tornado.web.RequestHandler):
         self.write('Server shutdown at '+str(datetime.datetime.now()))
         WS.stop()
 
-class FrameViewer(tornado.web.RequestHandler):
+class AjaxViewer(tornado.web.RequestHandler):
     def get(self):
         self.render('ajax.html')
         #self.set_status(200)
@@ -445,6 +496,10 @@ class FrameViewer(tornado.web.RequestHandler):
         #self.write("<br/><img id='frame' src='frame.jpg'></body></html>")
         #self.finish()
 
+class StreamViewer(tornado.web.RequestHandler):
+    def get(self):
+        self.render('stream.html')
+
 class FrameHandler(tornado.web.RequestHandler):
     """Serve the last webcam frame (one-off image)"""
     def get(self):
@@ -453,11 +508,115 @@ class FrameHandler(tornado.web.RequestHandler):
             rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
         jpeg = Image.fromarray(rgb)
         ioBuf = StringIO.StringIO()
-        self.set_header('Content-type', 'image/jpg')
         jpeg.save(ioBuf, 'JPEG')
         ioBuf.seek(0)
+        self.set_header('Content-type', 'image/jpg')
         self.write(ioBuf.read())
         self.finish()
+
+class MJPEGHandler(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def get(self):
+        loop = tornado.ioloop.IOLoop.current()
+        self.t = time()
+        i = 0
+        while True:
+            i += 1
+            logging.info("looping "+str(i))
+            t2 = time()
+            with G.frameLock:
+                rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
+            jpeg = Image.fromarray(rgb)
+            ioBuf = StringIO.StringIO()
+            jpeg.save(ioBuf, 'JPEG')
+            ioBuf.seek(0)
+            if self.t < t2:
+                self.write("--jpgboundary--\n")
+                self.write("Content-type: image/jpeg\r\n")
+                self.write("Content-length: %s\r\n\r\n" % str(ioBuf.len))
+                self.write(ioBuf.read())
+                self.t = t2
+                yield tornado.gen.Task(self.flush)
+            else:
+                yield tornado.gen.Task(loop.add_timeout, loop.time() + 0.05)
+
+"""
+    def gen_image(self, arg, callback):
+        if arg<150:
+            self.arg += 1
+            logging.info("gen_image "+str(arg) )
+            with G.frameLock:
+                rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
+            jpeg = Image.fromarray(rgb)
+            ioBuf = StringIO.StringIO()
+            jpeg.save(ioBuf, 'JPEG')
+            ioBuf.seek(0)
+            self.write("--jpgboundary\n")
+            self.write("Content-type: image/jpeg\r\n")
+            self.write("Content-length: %s\r\n\r\n" % str(ioBuf.len))
+            logging.info("bytes: "+str(arg) )
+            self.write(ioBuf.read())
+            #self.flush()
+            response = True
+        else:
+            response = None
+        callback(response)
+
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def get(self):
+        logging.info("starting mjpeg")
+        self.arg = 1
+        self.set_status(200)
+        self.set_header('Content-type','multipart/x-mixed-replace; boundary=--jpgboundary')
+        #self.flush()
+
+        while True:
+            response = yield tornado.gen.Task(self.gen_image, self.arg)
+            response2 = yield tornado.gen.Task(self.flush)
+            logging.info("flush says "+str(response2))
+            self.arg += 1
+            if response:
+                pass
+                #self.write(response)
+            else:
+                break
+        self.finish()
+"""
+
+"""
+   def get(self):
+       respose = yield tornado.gen.Task(self.renderFrames)
+
+   def renderFrames(self):
+       while True:
+       with G.frameLock:
+           rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
+       jpeg = Image.fromarray(rgb)
+       ioBuf = StringIO.StringIO()
+       jpeg.save(ioBuf, 'JPEG')
+       ioBuf.seek(0)
+       self.write()
+   """
+
+"""
+        loop = tornado.ioloop.IOLoop.current()
+        self.served_image_timestamp = time.time()
+        my_boundary = "--myboundary--\n"
+        while True:
+          timestamp, img = detector.current_jpeg()
+          if self.served_image_timestamp < timestamp:
+            self.write(my_boundary)
+            self.write("Content-type: image/jpeg\r\n")
+            self.write("Content-length: %s\r\n\r\n" % len(img.data))
+            self.write(str(img.data))
+            self.served_image_timestamp = timestamp
+            yield gen.Task(self.flush)
+          else:
+            yield gen.Task(loop.add_timeout, loop.time() + 0.02)
+        """
+
 
 class RPCHandler(JSONRPCHandler):
 
@@ -498,8 +657,10 @@ if __name__ == "__main__":
         #(r'/images/(.*)', tornado.web.StaticFileHandler, {'path': WS.css_path}),
         #(r"/down", ShutdownHandler),
         #(r'/rpc/(.*)', HelloHandler),
+        (r'/stream.mjpg', MJPEGHandler),
+        (r"/stream", StreamViewer),
         (r'/rpc', RPCHandler),
-        (r"/ajax", FrameViewer),
+        (r"/ajax", AjaxViewer),
         (r"/frame.jpg", FrameHandler),
         (r"/favicon.ico", tornado.web.StaticFileHandler, {'path': WS.static_path}),
         (r"/", IndexHandler)
@@ -507,10 +668,22 @@ if __name__ == "__main__":
 
     logging.info("start "+str(datetime.datetime.now()))
     WS.start(port=8080)
-    WS.io()
-    logging.info("stop "+str(datetime.datetime.now()))
+
+    # Run the OpenCV select-new-camera loop (everything else is threaded)
+    try:
+        while True:
+            sleep(1)
+    except KeyboardInterrupt:
+        pass
+    WS.io_loop.stop()
+    #WS.io()
+
+    # Handle webcam disconnect/reconnect in the main thread
+    # - CV doesn't like having the capture device threaded
+    #TODO
 
     # Cleanup
+    logging.info("stop "+str(datetime.datetime.now()))
     print "Cleanup"
     W.stop()
 
@@ -754,4 +927,39 @@ Short term:
       implement player resizing
         split expand and contract events for sidebar resize, need to call it when we minimise/maximise
         iframe dynamically resizes to fit (on window resize, on load, and when the checkbox changes)
+
+      write gen_defaults
+        store:
+            shape.{x1,x2,y1,y2} (%)
+            [green,red].{h_min,h_max,s_min,s_max,v_min}
+            [black].{s_max,v_max}
+            [white].{s_max,v_min}
+            hsv_thresh
+            kernel_k
+            min_object_size
+            max_image_size
+
+      make their UI elements
+
+        implement such that all missing values get replaced -> fill_missing_defaults
+      implement open_db such that, if it opened it with sync set to false, but db says sync is true... set sync to true
+      UI: <fake>Storage:|<radio>Volatile|<radio>Persistent|<rpc-btn>Save Now|<rpc-btn>Save to Defaults
+      add a 'persistent storage' checkbox in UI; on change, runs RPC
+
+
+
+      split int two: control and config
+        config is cv
+        control is anything that has to sync between clients, but not get stored.
+        it gets emptied every time we push data to client
+            [webcam,cv,bmd,mqtt,simulation].{set_halted}
+            [webcam].{disconnect}
+            // paused processing, webcam state, webcam size, server start time, fps, camera res, #frames since
+        everything we need to tell clients in one-directional broadcast is simply cobbled together in a batch
+      //  defaults in a defaults folder with same name
+      //  separate 'persistent' checkboxes
+
+      cleanup sidebar, rename socket tx to Streaming Tx
+
+
 """

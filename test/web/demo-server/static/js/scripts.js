@@ -204,6 +204,13 @@ $(function() {
 
 // ====================================================================
 
+function load_server_config() {
+	$.getJSON("config.json", function(json) {
+		console.log("Received server state");
+	    console.log(json); // this will show the info it in firebug console
+	});
+}
+
 /* Background tasks */
 
 function blocsim_event_loop() {
@@ -212,4 +219,5 @@ function blocsim_event_loop() {
 
 $(function() {
 	blocsim_event_loop();
+	load_server_config();
 });
