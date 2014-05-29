@@ -27,25 +27,30 @@ from PIL import Image
 import StringIO
 import shutil
 import pickledb
+import mosquitto
 
 #======================================================================
 
 
 class Globals(object):
+    DBG_MQTT = False
     DBG_LOCK = False
     DBG_DB = True
     DBG_FPS = False
     LOG_LEVEL = logging.DEBUG
 
     TEST_CV = False
+    TEST_MQTT = False
 
     PATH_DEFAULTS = "config/defaults.db"
     PATH_CONFIG = "config/config.db"
     PERSISTENCE = True
     SYNC_WITH_DISK = False
+
     def __init__(self):
         self.camLock = RLock()
         self.frameLock = RLock()
+        self.dbLock = RLock()
         self.db = None
         logging.getLogger().setLevel(Globals.LOG_LEVEL)
 
@@ -91,6 +96,119 @@ class Globals(object):
         if Globals.DBG_DB: logging.info("db: gen_defaults ({} items created)".format(len(self.db.db)))
 
 G = Globals()
+
+#======================================================================
+
+
+class MQTT(object):
+    TOPIC_BLOCSIM = "blocsim"
+    TOPIC_ADAPTERS = ["blocsim/adapters/digital"]
+    IP = "127.0.0.1"
+    PORT = 1883
+    QOS = 1
+
+    def __init__(self):
+        self.mqttclient = mosquitto.Mosquitto() #no client id = randomly generated
+        self.mqttclient.on_message = self.on_message
+        self.mqttclient.on_connect = self.on_connect
+        self.mqttclient.on_disconnect = self.on_disconnect
+        self.mqttclient.on_subscribe = self.on_subscribe
+        self.mqttclient.on_unsubscribe = self.on_unsubscribe
+        self.mqttclient.on_publish = self.on_publish
+
+        self.ip = MQTT.IP
+        self.port = MQTT.PORT
+        self.qos = MQTT.QOS
+        self.maintopic = MQTT.TOPIC_BLOCSIM
+        self.message = "{}"
+
+        self.mqttThread = Thread(target=self.mqtt_loop)
+        self.run = False
+
+    def on_message(self, mosq, obj, msg):
+        if G.DBG_MQTT: logging.debug("MQTT Received\t'%s' | topic '%s' qos %d" % (msg.topic, msg.payload, msg.qos))
+
+    def on_connect(self, mosq, obj, rc):
+        if G.DBG_MQTT: logging.debug("MQTT Connected\tstatus %d" % rc)
+
+    def on_disconnect(self, mosq, obj, rc):
+        if G.DBG_MQTT: logging.debug("MQTT Disconnected\tstatus %d" % rc)
+
+    def on_subscribe(self, mosq, obj, mid, qos_list):
+        if G.DBG_MQTT: logging.debug("MQTT Subscribed\tmid %s" % mid)
+
+    def on_unsubscribe(self, mosq, obj, mid):
+        if G.DBG_MQTT: logging.debug("MQTT Unsubscribed\tmid %s" % mid)
+
+    def on_publish(self, mosq, obj, mid):
+        if G.DBG_MQTT: logging.debug("MQTT Published\tmid %s" % mid)
+
+    #==================================================================
+
+    def mqtt_loop(self):
+        while self.run:
+            result = self.mqttclient.loop(0.1, 1)
+            if result != 0:
+                logging.warning("MQTT network disconnect/error")
+                self.stop()
+        #logging.info("MQTT loop finish")
+
+    def start(self):
+        logging.info("MQTT Connecting to %s:%d" % (self.ip, self.port))
+        self.mqttclient.connect(self.ip, self.port)
+        self.run = True
+
+        self.mqttThread.start()
+
+        if G.TEST_MQTT: self.test()
+
+    def stop(self):
+        self.run = False
+        logging.info("MQTT Stop...")
+        self.mqttclient.disconnect()
+        self.mqttThread.join(3)
+
+    def publish(self, topic=None, msg=None):
+        if topic is None: topic = self.maintopic
+        if msg is None:   msg   = self.message
+        if not self.run:
+            logging.warning("MQTT Trying to publish without a connection")
+            return
+        if G.DBG_MQTT: logging.info("MQTT Publishing: qos %d | topic %s | '%s'" % (self.qos, topic, msg))
+        self.mqttclient.publish(topic, msg, self.qos)
+
+    def subscribe(self, topic=None):
+        if topic is None: topic = self.maintopic
+        logging.info("MQTT Subscribed to %s" % topic)
+        self.mqttclient.subscribe(topic, self.qos)
+
+    def unsubscribe(self, topic=None):
+        if topic is None: topic = self.maintopic
+        logging.info("MQTT Unsubscribing from %s" % topic)
+        self.mqttclient.unsubscribe(topic)
+
+    def test(self):
+        self.subscribe()
+        self.publish()
+        self.unsubscribe()
+
+MQ = MQTT()
+
+"""
+try:
+    while True:
+        msg="{x:5,y:10,o:90,d:35}"
+        topic="mqtttest"
+        qos=1
+        print "Publishing '%s' to topic '%s', qos%d" %(msg, topic, qos)
+        mqttclient.publish(topic, msg, qos)
+        if (mqttclient.loop() != 0):
+            print "<Network Disconnect/Error>"
+            stop()
+        time.sleep(1)
+except KeyboardInterrupt:
+    stop()
+"""
 
 #======================================================================
 
@@ -270,7 +388,7 @@ C = CV()
 
 
 class Webcam(object):
-    FPS_ON = 30  # limit FPS when processing is on
+    FPS_ON = 15  # limit FPS when processing is on
     FPS_OFF = 30
     FPS_RECORD_LEN = 20
     FPS_UPDATE_INTERVAL = 1
@@ -284,11 +402,14 @@ class Webcam(object):
 
         self.timerCounter = 0
         self.fps = 0.0
+        self.fps2 = 0.0
         self.frameTimes = deque([0]*self.FPS_RECORD_LEN)
+        self.processedTimes = deque([0]*self.FPS_RECORD_LEN)
         self.fpsLimit = self.FPS_OFF
 
         self.auto_connect = Webcam.AUTO_CONNECT
         self.cam = None
+        self.ret = True
 
         self.frame = C.zeros(depth=3)
         #self.frameAsJpeg = None
@@ -301,10 +422,13 @@ class Webcam(object):
 
         self.cvThread = Thread(target=self.capture_loop)
         self.timerThread = Thread(target=self.timer_loop)
-        self.processingThread = Thread(target=self.process_loop)
+        self.processThread = Thread(target=self.process_loop)
 
         self.captureEvent = Event()
         self.captureEvent.clear()
+
+        self.processEvent = Event()
+        self.processEvent.clear()
 
         self.stopEvent = Event()
         self.stopEvent.clear()
@@ -313,17 +437,20 @@ class Webcam(object):
         if 'auto_connect' in args:
             self.auto_connect = args['auto_connect']
         if self.auto_connect:
-            self.cam = cv2.VideoCapture(0)
+            self.cam = cv2.VideoCapture(3)
         self.cvThread.start()
         self.timerThread.start()
+        self.processThread.start()
         self.captureEvent.set()
         atexit.register(self.stop)
 
     def stop(self):
         self.stopEvent.set()     # end timer loop
         self.captureEvent.set()  # unblock capture loop
+        self.processEvent.set()  # unblock processing loop
+        MQ.stop()  # be nice and stop Mosquitto cleanly
         if W.cvThread.is_alive():
-            W.cvThread.join()
+            W.cvThread.join(3)
         if self.cam:
             W.cam.release()
         cv2.destroyAllWindows()
@@ -336,6 +463,16 @@ class Webcam(object):
             self.fps = float(self.FPS_RECORD_LEN) / sum_timedelta
         else:
             self.fps = 0.0
+        #self.frameN += 1  # doesn't count unless it gets processed
+
+    def fps2_update(self):
+        self.processedTimes.rotate()
+        self.processedTimes[0] = time()
+        sum_timedelta = self.processedTimes[0] - self.processedTimes[-1]
+        if sum_timedelta > 0:
+            self.fps2 = float(self.FPS_RECORD_LEN) / sum_timedelta
+        else:
+            self.fps2 = 0.0
         self.frameN += 1
 
     def capture_loop(self):
@@ -344,9 +481,14 @@ class Webcam(object):
             with G.camLock:
                 if G.DBG_LOCK: print "using lock"
                 if self.cam:
-                    ret, f = self.cam.read()
-                    self.frameRawH, self.frameRawW = f.shape[:2]
+                    self.ret, f = self.cam.read()
             if self.stopEvent.isSet(): break
+            if (self.ret == False) and (self.cam):
+                self.cam = None
+                logging.warning("CV2 camera disconnect")
+                #TODO
+            if self.cam:
+                self.frameRawH, self.frameRawW = f.shape[:2]
             if G.DBG_LOCK: print "cv_loop wait frameLock... ",
             with G.frameLock:
                 if G.DBG_LOCK: print "using lock"
@@ -354,6 +496,7 @@ class Webcam(object):
                     self.frameRaw = f
                     if self.FORCE_RESIZE:
                         self.frameRaw = C.resize_fixed(f)
+                    self.processEvent.set()
                     """ removed the .copy() - nobody's going to modify f,
                         and it will be discarded next frame anyway.
                         safe enough to directly reference like this"""
@@ -363,8 +506,8 @@ class Webcam(object):
                     #cv2.imwrite('static/images/frame.jpg', f)
                     #
                     self.fps_update()
-            #self.captureEvent.wait()
-            #self.captureEvent.clear()
+            self.captureEvent.wait()
+            self.captureEvent.clear()
             if self.stopEvent.isSet(): break
 
 
@@ -377,6 +520,19 @@ class Webcam(object):
                     print "fps: %.2f" % self.fps
 
     def process_loop(self):
+        while True:
+            # Wait for frame
+            if self.stopEvent.isSet(): break
+            self.processEvent.wait()
+            self.processEvent.clear()
+            if self.stopEvent.isSet(): break
+            #
+            #TODO
+            #
+            self.fps2_update()
+            # Publish: Mosquitto
+            if self.stopEvent.isSet(): break
+            MQ.publish()
         pass
 
 W = Webcam()
@@ -652,6 +808,9 @@ class RPCHandler(JSONRPCHandler):
 #======================================================================
 
 if __name__ == "__main__":
+
+    # MQTT
+    MQ.start()
 
     # Webcam
     W.start(auto_connect=True)
@@ -959,5 +1118,26 @@ Short term:
 
       cleanup sidebar, rename socket tx to Streaming Tx
 
+      next
+        implement publish/subscribe (just install and test)
+        camera auto-reconnect
+        image streaming (incl. thumbnail) with get-values (which frame ID)
+        .json settings web request & the initial loading of them in the client
+        more buttons & associated RPCs implemented
+        super basic sockjs with periodic 'hello world' broadcast
+        add basic features (connect/disconnect events, handler structure on each end)
+        add client & server side handling to process and display every-time periodic data
+            split FPS: apparent vs actual
+        fabric.js areas incl. thumbnail load on a timer (always the same one)
+        slider placement (use tables and fixed values)
+        slider code (UI and values)
+        processing thread on server (incl. placeholder broadcast data & some images)
+        implement initial db values function (fills them in if not there)
+        opencv color tracking (just the visual frames)
 
+        start implementing server/client sync
+
+        be careful with server's internal pubsub, the server and e.g. opencv loop are on different threads
+            - add an internal RLock to the global keystore (the config one and the temporary inbound queue)
+            - inbound queue gets processed in opencv thread
 """
