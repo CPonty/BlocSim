@@ -92,10 +92,20 @@ class Globals(object):
         db_defaults.dump()
 
     def gen_defaults(self):
+        """
+            [green,red].{h_min,h_max,s_min,s_max,v_min}
+            [black].{s_max,v_max}
+            [white].{s_max,v_min}
+            hsv_thresh
+            kernel_k
+            min_object_size
+            max_image_size
+        """
         #
         #TODO generate db
         #
         if Globals.DBG_DB: logging.info("db: gen_defaults ({} items created)".format(len(self.db.db)))
+        self.db.
 
 G = Globals()
 
@@ -396,6 +406,7 @@ class Webcam(object):
     FPS_UPDATE_INTERVAL = 1
     AUTO_CONNECT = True
     FORCE_RESIZE = False
+    CAMID = 0
 
     resolutions = [480, 720, 1080]
 
@@ -411,6 +422,7 @@ class Webcam(object):
 
         self.auto_connect = Webcam.AUTO_CONNECT
         self.cam = None
+        self.cam_id = Webcam.CAMID
         self.ret = True
 
         self.frame = C.zeros(depth=3)
@@ -439,7 +451,7 @@ class Webcam(object):
         if 'auto_connect' in args:
             self.auto_connect = args['auto_connect']
         if self.auto_connect:
-            self.cam = cv2.VideoCapture(0)
+            self.cam = cv2.VideoCapture(self.cam_id)
         self.cvThread.start()
         self.timerThread.start()
         self.processThread.start()
@@ -532,9 +544,12 @@ class Webcam(object):
             #TODO
             #
             self.fps2_update()
-            # Publish: Mosquitto
             if self.stopEvent.isSet(): break
-            MQ.publish()
+            # Publish: Mosquitto
+            blocsim_msg = json.dumps({})
+            MQ.publish(topic=MQ.TOPIC_BLOCSIM, msg=blocsim_msg)
+            adapter_msg = json.dumps({})
+            MQ.publish(topic=MQ.TOPIC_ADAPTERS[0], msg=adapter_msg)
         pass
 
 W = Webcam()
@@ -635,8 +650,8 @@ WS = WebServer()
 class SockJSHandler(sockjs.tornado.SockJSConnection):
     """Chat connection implementation"""
     # Class level variable
-    BROADCAST_PERIOD = 200  # ms
-    DBG_VERBOSE = True
+    BROADCAST_PERIOD = 100  # ms
+    DBG_VERBOSE = False
     sock_clients = set()
     data = dict()
     ID = 0
@@ -870,7 +885,30 @@ class RPCHandler(JSONRPCHandler):
         #
         #TODO disregard if camera not currently running
         #
-        return 'Switching to most recently connected video source...'
+        #self.cam = cv2.VideoCapture(self.cam_id)
+        camId = 0
+        ret = False
+        with G.camLock:
+            startCamId = W.cam_id
+            W.cam = None
+            while not ret:
+                W.cam_id += 1
+                W.cam = cv2.VideoCapture(W.cam_id)
+                ret, f = W.cam.read()
+                if not ret:
+                    W.cam_id = -1
+                if (W.cam_id == startCamId) and (not ret):
+                    break
+            camId = W.cam_id
+        if (W.cam is None) or (not ret):
+            return "Failed to find a video source"
+        else:
+            return 'Switched to next available video source: '+str(camId)
+
+    def disconnect_webcam(self):
+        with G.camLock:
+            W.cam = None
+        return 'Disconnected video source'
 """
     def add(self, x, y):
         return x+y
@@ -1161,7 +1199,7 @@ Short term:
 
       write gen_defaults
         store:
-            shape.{x1,x2,y1,y2} (%)
+            #shape.{x1,x2,y1,y2} (%)
             [green,red].{h_min,h_max,s_min,s_max,v_min}
             [black].{s_max,v_max}
             [white].{s_max,v_min}
@@ -1193,7 +1231,8 @@ Short term:
       cleanup sidebar, rename socket tx to Streaming Tx
 
       next
-        implement publish/subscribe (just install and test)
+        N   implement publish/subscribe (just install and test)
+            N   not actually that useful as services are spread across threads & it's really thread-safe
         camera auto-reconnect
         image streaming (incl. thumbnail) with get-values (which frame ID)
         .json settings web request & the initial loading of them in the client

@@ -1,13 +1,24 @@
 
+function time_ms() {
+	return (new Date()).getTime();
+}
+
 blocsim_vars = {
 	autoexpand_sidebar: false,
 	autoexpand_tabs: true,
 	rpc_path: "/rpc",
 	rpc_debug: false,
 	//rpc_url: "http://localhost:8080/rpc"
-	event_period: 200
-
+	event_period: 100,
+	webcam: {mode: 1},
+	cv: {mode: 1},
+	bmd: {mode: 1},
+	server_running: true,
+	frame_reload_delay: 20,
+	time_last_frame: time_ms()
 };
+
+var sock = null;
 
 // ====================================================================
 /* RPC */
@@ -86,8 +97,18 @@ function rpc_call_console_handler(response) {
 blocsim_rpc.handle.helloworld = rpc_call_alert_handler;
 blocsim_rpc.handle.echo = rpc_call_alert_handler;
 
-blocsim_rpc.handle.shutdown = rpc_call_alert_handler;
-blocsim_rpc.handle.cycle_webcam = rpc_call_console_handler;
+blocsim_rpc.handle.shutdown = function(response) {
+        rpc_call_alert_handler(response);
+        if (response.result) {
+		    $( "#server-indicator" ).css("background-color", "#cc0000");
+		    $( "#cv-indicator" ).css("background-color", "#cc0000");
+		    $( "#bmd-indicator" ).css("background-color", "#cc0000");
+		    $( "#webcam-indicator" ).css("background-color", "#cc0000");
+		    blocsim_vars.server_running = false;
+        }
+};
+blocsim_rpc.handle.cycle_webcam = rpc_call_alert_handler;
+blocsim_rpc.handle.disconnect_webcam = rpc_call_alert_handler;
 
 /*
 blocsim_rpc.handle.helloworld = function(response) {
@@ -156,7 +177,34 @@ function shutdown() {
 }
 */
 
+function frame_reload() {
+    $( "#frame" ).attr('src', "frame.jpg#"+Math.random());
+}
+
+function frame_loaded() {
+    if ( blocsim_vars.webcam.mode == 1 ) {
+        window.setTimeout(frame_reload, blocsim_vars.frame_reload_delay);
+    }
+}
+
 $(function() {
+
+    $( "#frame" ).load( function() {
+    	blocsim_vars.server_running = true;
+	    $( "#server-indicator" ).css("background-color", "#00cc00");
+	    blocsim_vars.time_last_frame = time_ms();
+    	frame_loaded();
+    });
+    /*
+    $( "#refresh-check" ).change( function() {
+        do_stream = $(this).is(":checked");
+        reload();
+    });
+	*/
+    window.setTimeout(frame_reload, 500);
+
+
+
 
 	$( "#server-sidebar-shutdown" ).click(function() {
 		rpc_call("shutdown");
@@ -168,22 +216,32 @@ $(function() {
 	});
 
 	$("input[name=webcam-sidebar-radio1]:radio").change(function () {
-		alert('webcam-radio-connection');
+		//alert('webcam-radio-connection '+$(this).val());
+		blocsim_vars.webcam.mode = parseInt($(this).val());
+		frame_loaded();
 	});
 
 	$("input[name=cv-sidebar-radio1]:radio").change(function () {
-		alert('cv-radio-connection');
+		//alert('cv-radio-connection '+$(this).val());
+		blocsim_vars.cv.mode = parseInt($(this).val());
 	});
 
 	$("input[name=bmd-sidebar-radio1]:radio").change(function () {
-		alert('bmd-radio-connection');
+		//alert('bmd-radio-connection '+$(this).val());
+		blocsim_vars.bmd.mode = parseInt($(this).val());
 	});
 
-
+	/*
 	$('#webcam-sidebar-eject:checkbox').change(function() {
 		$( "#webcam-sidebar-cycle" ).attr("disabled", this.checked);
 		alert('webcam-checked-eject');
 	}); 
+	*/
+
+	$('#webcam-sidebar-eject:button').click(function() {
+		//alert('webcam-button-eject');
+		rpc_call("disconnect_webcam");
+	});
 
 	$('#bmd-sidebar-mqtt:checkbox').change(function() {
 		alert('bmd-checked-mqtt');
@@ -195,7 +253,12 @@ $(function() {
 
 	$('#server-sidebar-eject:checkbox').change(function() {
 		//alert('server-checked-eject');
-		rpc_call("");
+		//.is(':checked')
+		if (this.checked) {
+			sockjs_disconnect();
+		} else {
+			sockjs_connect();
+		}
 	});
 
 
@@ -215,27 +278,79 @@ $(function() {
 function load_server_config() {
 	$.getJSON("config.json", function(json) {
 		console.log("Received server state");
-	    console.log(json); // this will show the info it in firebug console
+	    console.log(json);
 	});
 }
 
 function blocsim_event_loop() {
 
+	//console.log("window.sock", window.sock);
+	//console.log("sock", sock);
 	//
-	window.setInterval(blocsim_event_loop, blocsim_vars.event_period);
 }
+
+function blocsim_tick_loop() {
+	frame_loaded();
+
+	if ((sock == null) && (!($("#server-sidebar-eject:checkbox").is(':checked'))))  {
+		sockjs_connect();
+	}
+
+	if ((sock==null) && (blocsim_vars.webcam.mode!=1 || (time_ms() - blocsim_vars.time_last_frame) > 1500)) {
+		blocsim_vars.server_running = false;
+		$( "#server-indicator" ).css("background-color", "#ccaa00");
+	}
+}
+
 
 // ====================================================================
 
 /* Websockets */
 
+sockjs_connect = function() {
+	sockjs_disconnect();
+
+	sock = new SockJS('http://' + window.location.host + '/socket');
+
+	sock.onopen = function() {
+		console.log('open');
+		blocsim_vars.server_running = true;
+	    $( "#server-indicator" ).css("background-color", "#00cc00");
+	    $( "#cv-indicator" ).css("background-color", "#00cc00");
+	    $( "#bmd-indicator" ).css("background-color", "#00cc00");
+	    $( "#webcam-indicator" ).css("background-color", "#ccaa00");
+	};
+	sock.onmessage = function(e) {
+	    //console.log('message', e.data);
+	    console.log('rx');
+	};
+	sock.onclose = function() {
+	    console.log('close');
+	    sock = null;
+	    if (blocsim_vars.server_running) {
+		    $( "#server-indicator" ).css("background-color", "#ccaa00");
+		    $( "#cv-indicator" ).css("background-color", "#ccaa00");
+		    $( "#bmd-indicator" ).css("background-color", "#ccaa00");
+		    $( "#webcam-indicator" ).css("background-color", "#ccaa00");
+		}
+	};
+};
+
+sockjs_disconnect = function() {
+	if (sock != null) {
+		console.log('Disconnecting...');
+
+		sock.close();
+		sock = null;
+	}
+}
 
 $(function() {
-	blocsim_event_loop();
-	load_server_config();
+	sockjs_connect();
 
-	conn = null;
+	//var conn = null;
 
+/*
 	connect = function() {
 		disconnect();
 
@@ -262,10 +377,15 @@ $(function() {
 			conn = null;
 		}
 	}
+*/
 
-	window.setTimeout(function(){
-		console.log("First connect attempt");
-		connect();
-	}, 100);
+	window.setInterval(blocsim_event_loop, blocsim_vars.event_period);
+	window.setInterval(blocsim_tick_loop, 1000);
+	load_server_config();
+
+	//window.setTimeout(function(){
+	//	console.log("First connect attempt");
+	//	connect();
+	//}, 100);
 	
 });

@@ -12,11 +12,11 @@
     <div class="sidebar-right">
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
-                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-receiving" class="play-icon" checked="1">
+                <input value="1" type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-receiving" class="play-icon" checked="1">
                 <label for="webcam-sidebar-receiving" style="margin-right: -5px"> Receive Data </label>
-                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-paused" class="pause-icon">
+                <input value="2" type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-paused" class="pause-icon">
                 <label for="webcam-sidebar-paused" style="margin-right: -5px"> Ignore Data </label>
-                <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-stopped" class="stop-icon">
+                <input value="3" type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-stopped" class="stop-icon">
                 <label for="webcam-sidebar-stopped" style="margin-right: -5px"> Stop Processing </label>
                 <!--
                 <input type="radio" name="webcam-sidebar-radio1" id="webcam-sidebar-disconnect" class="close-icon">
@@ -24,8 +24,7 @@
                 -->
             </div>
             <div class="buttonset sidebar-right">
-                <input type="checkbox" id="webcam-sidebar-eject" class="eject-text">
-                <label for="webcam-sidebar-eject" style="margin-right: -5px"> Disconnect </label>
+                <button id="webcam-sidebar-eject" class="eject-text"> Disconnect </button>
                 <button id="webcam-sidebar-cycle" class="refresh-text"> Detect </button>
             </div>
         </div>
@@ -67,11 +66,11 @@
     <div class="sidebar-right">
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
-                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-receiving" class="play-icon" checked="1">
+                <input value="1" type="radio" name="cv-sidebar-radio1" id="cv-sidebar-receiving" class="play-icon" checked="1">
                 <label for="cv-sidebar-receiving" style="margin-right: -5px"> Receive data </label>
-                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-paused" class="pause-icon">
+                <input value="2" type="radio" name="cv-sidebar-radio1" id="cv-sidebar-paused" class="pause-icon">
                 <label for="cv-sidebar-paused" style="margin-right: -5px"> Ignore data </label>
-                <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-stopped" class="stop-icon">
+                <input value="3" type="radio" name="cv-sidebar-radio1" id="cv-sidebar-stopped" class="stop-icon">
                 <label for="cv-sidebar-stopped" style="margin-right: -5px"> Stop processing </label>
                 <!--
                 <input type="radio" name="cv-sidebar-radio1" id="cv-sidebar-disconnect" class="close-icon">
@@ -85,10 +84,12 @@
                     <button id="cv-sidebar-resolution-dropdown" class="triangle-1-s-icon skinny-button"> &nbsp; </button>
                 </div>
                 <ul class="highz-1">
-                    <li><a href="#!">480p</a></li>
-                    <li><a href="#!">720p</a></li>
-                    <li><a href="#!">1080p</a></li>
-                    <li><a href="#!">(max)</a></li>
+                    <li>
+                        <a href="#!">480p</a>
+                        <a href="#!">720p</a>
+                        <a href="#!">1080p</a>
+                        <a href="#!">(max)</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -130,11 +131,11 @@
     <div class="sidebar-right">
         <div class="sidebar-controls">
             <div class="buttonset sidebar-right">
-                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-receiving" class="play-icon" checked="1">
+                <input value="1" type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-receiving" class="play-icon" checked="1">
                 <label for="bmd-sidebar-receiving" style="margin-right: -5px"> Receive Data </label>
-                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-paused" class="pause-icon">
+                <input value="2" type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-paused" class="pause-icon">
                 <label for="bmd-sidebar-paused" style="margin-right: -5px"> Ignore Data </label>
-                <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-stopped" class="stop-icon">
+                <input value="3" type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-stopped" class="stop-icon">
                 <label for="bmd-sidebar-stopped" style="margin-right: -5px"> Stop Processing </label>
                 <!--
                 <input type="radio" name="bmd-sidebar-radio1" id="bmd-sidebar-disconnect" class="close-icon">
