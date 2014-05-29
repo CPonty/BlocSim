@@ -15,7 +15,9 @@ blocsim_vars = {
 	bmd: {mode: 1},
 	server_running: true,
 	frame_reload_delay: 20,
-	time_last_frame: time_ms()
+	time_last_frame: time_ms(),
+	debug_sockjs: false,
+	max_resolution: 3
 };
 
 var sock = null;
@@ -226,6 +228,11 @@ $(function() {
 		blocsim_vars.cv.mode = parseInt($(this).val());
 	});
 
+	$("input[name=cv-sidebar-radio2]:radio").change(function () {
+		//alert('cv-radio-res '+$(this).val());
+		blocsim_vars.max_resolution = parseInt($(this).val());
+	});
+
 	$("input[name=bmd-sidebar-radio1]:radio").change(function () {
 		//alert('bmd-radio-connection '+$(this).val());
 		blocsim_vars.bmd.mode = parseInt($(this).val());
@@ -313,7 +320,7 @@ sockjs_connect = function() {
 	sock = new SockJS('http://' + window.location.host + '/socket');
 
 	sock.onopen = function() {
-		console.log('open');
+		console.log('websocket open');
 		blocsim_vars.server_running = true;
 	    $( "#server-indicator" ).css("background-color", "#00cc00");
 	    $( "#cv-indicator" ).css("background-color", "#00cc00");
@@ -322,10 +329,10 @@ sockjs_connect = function() {
 	};
 	sock.onmessage = function(e) {
 	    //console.log('message', e.data);
-	    console.log('rx');
+	    if (blocsim_vars.debug_sockjs) console.log('websocket rx');
 	};
 	sock.onclose = function() {
-	    console.log('close');
+	    if (blocsim_vars.debug_sockjs) console.log('websocket close');
 	    sock = null;
 	    if (blocsim_vars.server_running) {
 		    $( "#server-indicator" ).css("background-color", "#ccaa00");

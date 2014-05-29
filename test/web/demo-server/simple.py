@@ -105,7 +105,7 @@ class Globals(object):
         #TODO generate db
         #
         if Globals.DBG_DB: logging.info("db: gen_defaults ({} items created)".format(len(self.db.db)))
-        self.db.
+        #self.db.
 
 G = Globals()
 

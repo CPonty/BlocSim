@@ -142,7 +142,7 @@ $(function() {
     if ($(this).position().left > 100)
       $('#sidebar-collapsebtn').css('visibility', 'hidden');
   });
-  
+
   /*
   $('#whichTabBtn').click(function(e){
     alert($("#tabs").tabs('option', 'active'));
@@ -156,6 +156,7 @@ $(function() {
   /* UI events */
 
   // setup some dropdown menus
+  /*
   $( "#cv-sidebar-resolution-dropdown" ).button().click(function() { //dropdownbtn
     if (! (typeof window.activemenu === 'undefined') ) {
       window.activemenu.hide();
@@ -173,5 +174,5 @@ $(function() {
     }
     return false;
   }).parent().buttonset().next().hide().menu();
-
+  */
 });
