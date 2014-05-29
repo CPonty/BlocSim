@@ -301,6 +301,7 @@ class Webcam(object):
 
         self.cvThread = Thread(target=self.capture_loop)
         self.timerThread = Thread(target=self.timer_loop)
+        self.processingThread = Thread(target=self.process_loop)
 
         self.captureEvent = Event()
         self.captureEvent.clear()
@@ -362,9 +363,10 @@ class Webcam(object):
                     #cv2.imwrite('static/images/frame.jpg', f)
                     #
                     self.fps_update()
-            self.captureEvent.wait()
-            self.captureEvent.clear()
+            #self.captureEvent.wait()
+            #self.captureEvent.clear()
             if self.stopEvent.isSet(): break
+
 
     def timer_loop(self):
         while not self.stopEvent.wait(1./self.fpsLimit):
@@ -373,6 +375,9 @@ class Webcam(object):
             if G.DBG_FPS:
                 if self.timerCounter % self.FPS_UPDATE_INTERVAL == 0:
                     print "fps: %.2f" % self.fps
+
+    def process_loop(self):
+        pass
 
 W = Webcam()
 
@@ -400,7 +405,6 @@ class WebServer(object):
         self.app = None
         self.server = None
         self.io_loop = None
-        self.io_loop_thread = Thread(target=self.io)
         self.handlers = []
         self.shutdown_deadline = time()
         self.root = os.path.dirname(__file__)
@@ -417,7 +421,10 @@ class WebServer(object):
             logging.warning("IO loop started before server")
         self.io_loop = tornado.ioloop.IOLoop.instance()
         logging.info("IO loop starting")
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except KeyboardInterrupt:
+            self.io_loop.stop()
 
     def start(self, **kwargs):
         if 'web_port' in kwargs:
@@ -432,7 +439,6 @@ class WebServer(object):
         )
         self.server = tornado.httpserver.HTTPServer(self.app)
         self.server.listen(self.web_port)
-        self.io_loop_thread.start()
 
         #self.rpcThread.start()
 
@@ -668,15 +674,7 @@ if __name__ == "__main__":
 
     logging.info("start "+str(datetime.datetime.now()))
     WS.start(port=8080)
-
-    # Run the OpenCV select-new-camera loop (everything else is threaded)
-    try:
-        while True:
-            sleep(1)
-    except KeyboardInterrupt:
-        pass
-    WS.io_loop.stop()
-    #WS.io()
+    WS.io()
 
     # Handle webcam disconnect/reconnect in the main thread
     # - CV doesn't like having the capture device threaded
