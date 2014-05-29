@@ -29,6 +29,10 @@ import StringIO
 import shutil
 import pickledb
 import mosquitto
+from time import strftime
+
+def timestamp():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%.%f")
 
 #======================================================================
 
@@ -48,11 +52,13 @@ class Globals(object):
     PATH_CONFIG = "config/config.db"
     PERSISTENCE = True
     SYNC_WITH_DISK = False
+    FORCE_REGEN = True
 
     def __init__(self):
         self.camLock = RLock()
         self.frameLock = RLock()
         self.dbLock = RLock()
+        self.bmdLock = RLock()
         self.db = None
         logging.getLogger().setLevel(Globals.LOG_LEVEL)
 
@@ -72,6 +78,9 @@ class Globals(object):
             self.gen_defaults()
             #self.save_defaults()
             self.save_db()
+
+        if Globals.FORCE_REGEN:
+            self.gen_defaults()
 
     def load_db(self):
         self.db = pickledb.load(Globals.PATH_CONFIG, Globals.SYNC_WITH_DISK)
@@ -93,19 +102,39 @@ class Globals(object):
 
     def gen_defaults(self):
         """
-            [green,red].{h_min,h_max,s_min,s_max,v_min}
-            [black].{s_max,v_max}
-            [white].{s_max,v_min}
+        all of these auto-generate a slider & are passed as a map of name: {min,max,val}
+            black_sat max/min
+            black_val max/min
+            green_hue max/min
+            red_hue max/min
+            color_sat max/min
+            color_val max/min
             hsv_thresh
             kernel_k
-            min_object_size
-            max_image_size
+            dot_size max/min (%)
+            rectangle_area_ratio max/min (%)
         """
         #
         #TODO generate db
         #
+        #self.db.set("hello", "world")
+        #self.db.set("key", "value")
+        #self.db.set("text", "sample text here")
+        self.db.deldb()
+
+        # min, max, v1, v2, range_type
+        #
+        self.db.set("black_sat", [0,255, 0,30, "min"])
+        self.db.set("black_val", [0,255, 0,30, "min"])
+        self.db.set("green_hue", [0,180, 50,70, True])
+        self.db.set("red_hue", [0,180, 0,20, True])
+        self.db.set("color_sat", [0,255, 80,255, "max"])
+        self.db.set("color_val", [0,255, 80,255, "max"])
+        self.db.set("hsv_thresh", [0,255, 0,80, "min"])
+        self.db.set("kernel_k", [0,50, 0,10, "min"])
+        self.db.set("dot_size", [0,255, 30,100, True])
+        self.db.set("rectangle_area_ratio", [1,100, 90,100, "max"])
         if Globals.DBG_DB: logging.info("db: gen_defaults ({} items created)".format(len(self.db.db)))
-        #self.db.
 
 G = Globals()
 
@@ -425,6 +454,9 @@ class Webcam(object):
         self.cam_id = Webcam.CAMID
         self.ret = True
 
+        self.bmd_data = {}
+        self.sim_data = {}
+
         self.frame = C.zeros(depth=3)
         #self.frameAsJpeg = None
         self.frameN = 1
@@ -546,9 +578,24 @@ class Webcam(object):
             self.fps2_update()
             if self.stopEvent.isSet(): break
             # Publish: Mosquitto
-            blocsim_msg = json.dumps({})
+            bmd_data = {
+                "type": "blocsim",
+                "blocks": [],
+                "joiners": [],
+                "timestamp": timestamp()
+            }
+            sim_data = {
+                "type": "digital-logic",
+                "blocks": [],
+                "joiners": [],
+                "timestamp": timestamp()
+            }
+            with G.bmdLock:
+                self.bmd_data = bmd_data
+                self.sim_data = sim_data
+            blocsim_msg = json.dumps(bmd_data)
+            adapter_msg = json.dumps(sim_data)
             MQ.publish(topic=MQ.TOPIC_BLOCSIM, msg=blocsim_msg)
-            adapter_msg = json.dumps({})
             MQ.publish(topic=MQ.TOPIC_ADAPTERS[0], msg=adapter_msg)
         pass
 
@@ -683,10 +730,29 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
     def on_broadcast(self):
         if G.DBG_SOCKET and SockJSHandler.DBG_VERBOSE:  # printing this is pretty spammy...
             logging.debug("SockJSHandler %d broadcast: %s" % (self.id, str(datetime.datetime.now())))
-        self.send( str(datetime.datetime.now()) )
+
+        with G.dbLock:
+            db = G.db.db.copy()
+        with G.bmdLock:
+            bmd = W.bmd_data
+            sim = W.sim_data
+
+        sendData = {
+            "data": {
+                    "time": timestamp(),
+                    "fps-webcam": "%.2f" % W.fps,
+                    "fps-processing": "%.2f" % W.fps2,
+                    "frame-counter": W.frameN
+            },
+            "db": db,
+            "bmd": bmd,
+            "sim": sim,
+            "errors": []
+        }
         #
-        #TODO
         #
+        sendText = json.dumps(sendData)   # , sort_keys=True, indent=4, separators=(',', ': '))
+        self.send(sendText)
 
     def on_message(self, message):
         if G.DBG_SOCKET: logging.debug("SockJSHandler %d rx(%d)" % (self.id, len(message)))

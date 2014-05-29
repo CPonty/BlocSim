@@ -3,6 +3,28 @@ function time_ms() {
 	return (new Date()).getTime();
 }
 
+function syntaxHighlight(json) {
+    if (typeof json != 'string') {
+         json = JSON.stringify(json, undefined, 2);
+    }
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        var cls = 'number';
+        if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+                cls = 'key';
+            } else {
+                cls = 'string';
+            }
+        } else if (/true|false/.test(match)) {
+            cls = 'boolean';
+        } else if (/null/.test(match)) {
+            cls = 'null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+    });
+}
+
 blocsim_vars = {
 	autoexpand_sidebar: false,
 	autoexpand_tabs: true,
@@ -10,7 +32,7 @@ blocsim_vars = {
 	rpc_debug: false,
 	//rpc_url: "http://localhost:8080/rpc"
 	event_period: 100,
-	webcam: {mode: 1},
+	webcam: {mode: 2},
 	cv: {mode: 1},
 	bmd: {mode: 1},
 	server_running: true,
@@ -180,7 +202,7 @@ function shutdown() {
 */
 
 function frame_reload() {
-    $( "#frame" ).attr('src', "frame.jpg#"+Math.random());
+    $( "#frame" ).attr('src', "frame.jpg#"+time_ms());
 }
 
 function frame_loaded() {
@@ -330,6 +352,22 @@ sockjs_connect = function() {
 	sock.onmessage = function(e) {
 	    //console.log('message', e.data);
 	    if (blocsim_vars.debug_sockjs) console.log('websocket rx');
+	    var received = $.parseJSON(e.data);
+	    var allText = JSON.stringify(received, undefined, 4);
+	    var dbText = JSON.stringify(received.db, undefined, 4);
+	    var bmdText = JSON.stringify(received.bmd, undefined, 4);
+	    var simText = JSON.stringify(received.sim, undefined, 4);
+	    $( "#test-tab-sockjs-text" ).html(syntaxHighlight(allText));
+	    $( "#test-tab-db-text" ).html(syntaxHighlight(dbText));
+	    $( "#bmdTextBmd-tab-panel" ).html(syntaxHighlight(bmdText));
+	    $( "#simTextBmd-tab-panel" ).html(syntaxHighlight(bmdText));
+	    $( "#simTextLogic-tab-panel" ).html(syntaxHighlight(simText));
+	    
+	    //console.log(html);
+	    //console.log(e.data);
+	    //$( "#test-tab-sockjs-text" ).html(syntaxHighlight(e.data));
+	    
+	    //console.log(received.db);
 	};
 	sock.onclose = function() {
 	    if (blocsim_vars.debug_sockjs) console.log('websocket close');
