@@ -20,6 +20,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import sockjs.tornado
+import sockjs.tornado.periodic
 from tornadorpc.json import JSONRPCHandler
 from tornadorpc import private, start_server
 import logging
@@ -37,6 +38,7 @@ class Globals(object):
     DBG_LOCK = False
     DBG_DB = True
     DBG_FPS = False
+    DBG_SOCKET = True
     LOG_LEVEL = logging.DEBUG
 
     TEST_CV = False
@@ -437,7 +439,7 @@ class Webcam(object):
         if 'auto_connect' in args:
             self.auto_connect = args['auto_connect']
         if self.auto_connect:
-            self.cam = cv2.VideoCapture(3)
+            self.cam = cv2.VideoCapture(0)
         self.cvThread.start()
         self.timerThread.start()
         self.processThread.start()
@@ -546,6 +548,7 @@ class WebServer(object):
     SHUTDOWN_TIMEOUT_SEC = 1
     TEMPLATE_PATH = "templates"
     STATIC_PATH = "static"
+    SOCKJS_PATH = "socket"
     #CSS_PATH = "css"
     #JS_PATH = "js"
     #IMAGES_PATH = "images"
@@ -558,6 +561,7 @@ class WebServer(object):
             self.web_port = kwargs['web_port']
         #if 'rpc_port' in kwargs:
         #    self.rpc_port = kwargs['rpc_port']
+        self.sockJSRouter = None
         self.app = None
         self.server = None
         self.io_loop = None
@@ -577,6 +581,7 @@ class WebServer(object):
             logging.warning("IO loop started before server")
         self.io_loop = tornado.ioloop.IOLoop.instance()
         logging.info("IO loop starting")
+
         try:
             self.io_loop.start()
         except KeyboardInterrupt:
@@ -589,8 +594,10 @@ class WebServer(object):
         #    self.web_port = kwargs['rpc_port']
         if len(self.handlers) == 0:
             logging.warning("no request handlers defined!")
+
+        self.sockJSRouter = sockjs.tornado.SockJSRouter(SockJSHandler, '/'+self.SOCKJS_PATH)
         self.app = tornado.web.Application(
-            self.handlers, debug=self.DEBUG,
+            self.handlers + self.sockJSRouter.urls, debug=self.DEBUG,
             static_path=self.static_path, template_path=self.template_path
         )
         self.server = tornado.httpserver.HTTPServer(self.app)
@@ -624,6 +631,73 @@ WS = WebServer()
 
 #======================================================================
 
+
+class SockJSHandler(sockjs.tornado.SockJSConnection):
+    """Chat connection implementation"""
+    # Class level variable
+    BROADCAST_PERIOD = 100  # ms
+    DBG_VERBOSE = False
+    sock_clients = set()
+    data = dict()
+    ID = 0
+
+    def __init__(self, session):
+        super(SockJSHandler, self).__init__(session)
+        SockJSHandler.ID += 1
+        self.id = SockJSHandler.ID
+        self.state = dict()
+        self.state["name"] = ""
+        #self.state["message"] = ""
+        self.broadcast_timer = None
+        if G.DBG_SOCKET: logging.debug("SockJSHandler %d init" % self.id)
+
+        # Setup the endless socket broadcast
+        self.broadcast_timer = sockjs.tornado.periodic.Callback(
+            self.on_broadcast, SockJSHandler.BROADCAST_PERIOD, WS.io_loop
+        )
+        self.broadcast_timer.start()
+
+    def on_open(self, info):
+        if G.DBG_SOCKET: logging.debug("SockJSHandler %d open" % self.id)
+
+        # Send that someone joined
+        self.broadcast(self.sock_clients, "Client %d joined." % self.id)
+
+        # Add client to the clients list
+        self.sock_clients.add(self)
+
+    def on_broadcast(self):
+        if G.DBG_SOCKET and SockJSHandler.DBG_VERBOSE:  # printing this is pretty spammy...
+            logging.debug("SockJSHandler broadcast @ "+str(datetime.datetime.now()))
+        self.broadcast(self.sock_clients, str(datetime.datetime.now()) )
+        #
+        #TODO
+        #
+
+    def on_message(self, message):
+        if G.DBG_SOCKET: logging.debug("SockJSHandler %d rx(%d)" % (self.id, len(message)))
+
+        # Broadcast message
+        data = json.loads(message)
+        broadcast = dict()
+        for key, val in data.iteritems():
+            if key in self.state:
+                self.state[key] = val
+                broadcast[key] = val
+            else:
+                print "message %s: rejected key %s" % (message, key)
+        reply = json.dumps(broadcast)
+
+        #print message
+        self.broadcast(self.sock_clients, "Client %d:%s says: %s" % (self.id, self.state["name"], reply))
+
+    def on_close(self):
+        if G.DBG_SOCKET: logging.debug("SockJSHandler %d close" % self.id)
+
+        # Remove client from the clients list and broadcast leave message
+        self.sock_clients.remove(self)
+
+        self.broadcast(self.sock_clients, "Client %d left." % self.id)
 
 class IndexHandler(tornado.web.RequestHandler):
     """Regular HTTP handler to serve the page"""

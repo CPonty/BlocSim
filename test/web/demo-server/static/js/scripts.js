@@ -220,4 +220,37 @@ function blocsim_event_loop() {
 $(function() {
 	blocsim_event_loop();
 	load_server_config();
+
+	var conn = null;
+
+	function connect() {
+		conn = new SockJS('http://' + window.location.host + '/socket', ["websocket"]);
+
+		conn.onopen = function() {
+	    	console.log('Connected.');
+	    };
+	    conn.onmessage = function(e) {
+          console.log(e.data);
+        };
+		conn.onclose = function() {
+			console.log('Disconnected.');
+			conn = null;
+		};
+	}
+
+	function disconnect() {
+		if (conn != null) {
+			console.log('Disconnecting...');
+
+			conn.close();
+			conn = null;
+		}
+	}
+	window.set
+
+	window.setTimeout(function(){
+		console.log("First connect attempt");
+		connect();
+	}, 100);
+	
 });
