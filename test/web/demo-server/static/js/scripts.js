@@ -5,7 +5,8 @@ blocsim_vars = {
 	rpc_path: "/rpc",
 	rpc_debug: false,
 	//rpc_url: "http://localhost:8080/rpc"
-	player_fullscreen: false
+	event_period: 200
+
 };
 
 // ====================================================================
@@ -192,6 +193,11 @@ $(function() {
 		alert('bmd-checked-simulation');
 	});
 
+	$('#server-sidebar-eject:checkbox').change(function() {
+		//alert('server-checked-eject');
+		rpc_call("");
+	});
+
 
 	$('#webcam-sidebar-cycle:button').click(function() {
 		//alert('webcam-button-cycle');
@@ -204,6 +210,8 @@ $(function() {
 
 // ====================================================================
 
+/* Background tasks */
+
 function load_server_config() {
 	$.getJSON("config.json", function(json) {
 		console.log("Received server state");
@@ -211,34 +219,42 @@ function load_server_config() {
 	});
 }
 
-/* Background tasks */
-
 function blocsim_event_loop() {
-	//window.setInterval(blocsim_event_loop, 100);
+
+	//
+	window.setInterval(blocsim_event_loop, blocsim_vars.event_period);
 }
+
+// ====================================================================
+
+/* Websockets */
+
 
 $(function() {
 	blocsim_event_loop();
 	load_server_config();
 
-	var conn = null;
+	conn = null;
 
-	function connect() {
+	connect = function() {
+		disconnect();
+
 		conn = new SockJS('http://' + window.location.host + '/socket', ["websocket"]);
 
 		conn.onopen = function() {
 	    	console.log('Connected.');
 	    };
 	    conn.onmessage = function(e) {
-          console.log(e.data);
+          //console.log(e.data);
+          //console.log('data');
         };
 		conn.onclose = function() {
 			console.log('Disconnected.');
 			conn = null;
 		};
-	}
+	};
 
-	function disconnect() {
+	disconnect = function() {
 		if (conn != null) {
 			console.log('Disconnecting...');
 
@@ -246,7 +262,6 @@ $(function() {
 			conn = null;
 		}
 	}
-	window.set
 
 	window.setTimeout(function(){
 		console.log("First connect attempt");

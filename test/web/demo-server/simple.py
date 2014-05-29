@@ -635,8 +635,8 @@ WS = WebServer()
 class SockJSHandler(sockjs.tornado.SockJSConnection):
     """Chat connection implementation"""
     # Class level variable
-    BROADCAST_PERIOD = 100  # ms
-    DBG_VERBOSE = False
+    BROADCAST_PERIOD = 200  # ms
+    DBG_VERBOSE = True
     sock_clients = set()
     data = dict()
     ID = 0
@@ -648,7 +648,6 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         self.state = dict()
         self.state["name"] = ""
         #self.state["message"] = ""
-        self.broadcast_timer = None
         if G.DBG_SOCKET: logging.debug("SockJSHandler %d init" % self.id)
 
         # Setup the endless socket broadcast
@@ -668,8 +667,8 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
 
     def on_broadcast(self):
         if G.DBG_SOCKET and SockJSHandler.DBG_VERBOSE:  # printing this is pretty spammy...
-            logging.debug("SockJSHandler broadcast @ "+str(datetime.datetime.now()))
-        self.broadcast(self.sock_clients, str(datetime.datetime.now()) )
+            logging.debug("SockJSHandler %d broadcast: %s" % (self.id, str(datetime.datetime.now())))
+        self.send( str(datetime.datetime.now()) )
         #
         #TODO
         #
@@ -698,6 +697,7 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         self.sock_clients.remove(self)
 
         self.broadcast(self.sock_clients, "Client %d left." % self.id)
+        self.broadcast_timer.stop()
 
 class IndexHandler(tornado.web.RequestHandler):
     """Regular HTTP handler to serve the page"""
@@ -1198,7 +1198,7 @@ Short term:
         image streaming (incl. thumbnail) with get-values (which frame ID)
         .json settings web request & the initial loading of them in the client
         more buttons & associated RPCs implemented
-        super basic sockjs with periodic 'hello world' broadcast
+        X       super basic sockjs with periodic 'hello world' broadcast
         add basic features (connect/disconnect events, handler structure on each end)
         add client & server side handling to process and display every-time periodic data
             split FPS: apparent vs actual
