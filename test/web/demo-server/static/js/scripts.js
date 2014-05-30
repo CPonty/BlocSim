@@ -202,7 +202,9 @@ function shutdown() {
 */
 
 function frame_reload() {
-    $( "#frame" ).attr('src', "frame.jpg#"+time_ms());
+    $( "#frame" ).attr('src', 
+    	"frame.jpg?id="+$( "#webcam-tab-frame-slider" ).slider("option", "value").toString()+"#"+time_ms()
+    );
 }
 
 function frame_loaded() {
@@ -327,7 +329,7 @@ function blocsim_tick_loop() {
 
 	if ((sock==null) && (blocsim_vars.webcam.mode!=1 || (time_ms() - blocsim_vars.time_last_frame) > 1500)) {
 		blocsim_vars.server_running = false;
-		$( "#server-indicator" ).css("background-color", "#ccaa00");
+		$( "#server-indicator" ).css("background-color", "#f6931f");
 	}
 }
 
@@ -347,13 +349,15 @@ sockjs_connect = function() {
 	    $( "#server-indicator" ).css("background-color", "#00cc00");
 	    $( "#cv-indicator" ).css("background-color", "#00cc00");
 	    $( "#bmd-indicator" ).css("background-color", "#00cc00");
-	    $( "#webcam-indicator" ).css("background-color", "#ccaa00");
+	    $( "#webcam-indicator" ).css("background-color", "#f6931f");
 	};
 	sock.onmessage = function(e) {
 	    //console.log('message', e.data);
 	    if (blocsim_vars.debug_sockjs) console.log('websocket rx');
 	    var received = $.parseJSON(e.data);
-	    var allText = JSON.stringify(received, undefined, 4);
+	    var allMinusDb = jQuery.extend(true, {}, received);
+	    allMinusDb.db = "...";
+	    var allText = JSON.stringify(allMinusDb, undefined, 4);
 	    var dbText = JSON.stringify(received.db, undefined, 4);
 	    var bmdText = JSON.stringify(received.bmd, undefined, 4);
 	    var simText = JSON.stringify(received.sim, undefined, 4);
@@ -362,6 +366,7 @@ sockjs_connect = function() {
 	    $( "#bmdTextBmd-tab-panel" ).html(syntaxHighlight(bmdText));
 	    $( "#simTextBmd-tab-panel" ).html(syntaxHighlight(bmdText));
 	    $( "#simTextLogic-tab-panel" ).html(syntaxHighlight(simText));
+	    $( "#client-id-span" ).html(' # '+received.data.id);
 	    
 	    //console.log(html);
 	    //console.log(e.data);
@@ -373,10 +378,11 @@ sockjs_connect = function() {
 	    if (blocsim_vars.debug_sockjs) console.log('websocket close');
 	    sock = null;
 	    if (blocsim_vars.server_running) {
-		    $( "#server-indicator" ).css("background-color", "#ccaa00");
-		    $( "#cv-indicator" ).css("background-color", "#ccaa00");
-		    $( "#bmd-indicator" ).css("background-color", "#ccaa00");
-		    $( "#webcam-indicator" ).css("background-color", "#ccaa00");
+		    $( "#server-indicator" ).css("background-color", "#f6931f");
+		    $( "#cv-indicator" ).css("background-color", "#f6931f");
+		    $( "#bmd-indicator" ).css("background-color", "#f6931f");
+		    $( "#webcam-indicator" ).css("background-color", "#f6931f");
+		    $( "#client-id-span" ).html("");
 		}
 	};
 };

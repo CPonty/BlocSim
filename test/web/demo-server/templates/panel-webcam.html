@@ -100,6 +100,37 @@ Webcam
 </a>
 <hr/>
 <div id="calib-tab-panel" class="tab-accordion-area textspan">
+    <div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span>Price range:</span>
+                <span id="amount-1" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-1"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span>Price range:</span>
+                <span id="amount-2" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-2"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span>Price range:</span>
+                <span id="amount-3" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-3"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span>Price range:</span>
+                <span id="amount-4" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-4"></div>
+        </div>
+    </div>
+    <br/>
     Calibration keystore:
     <pre id="test-tab-db-text"></pre>
 </div>
@@ -131,27 +162,30 @@ Webcam
       value: select[ 0 ].selectedIndex,
       slide: function( event, ui ) {
         select[ 0 ].selectedIndex = ui.value;
+        frame_reload();
+        //alert('slid');
       }
     });
     $( "#webcam-tab-frame-name" ).change(function() {
       slider.slider( "value", this.selectedIndex );
+      frame_reload();
     });
   });
 
-
-  /*
-    $( "#slider-range-min" ).slider({
-      range: "min",
-      value: 0,
+ $(function() {
+   for (var i=1; i<=4; i++) {
+    $( "#sliderrange-"+i.toString() ).slider({
+      range: true,
       min: 0,
-      max: 12,
+      max: 500,
+      values: [ 75, 300 ],
       slide: function( event, ui ) {
-        $( "#amount" ).val( "$" + ui.value );
+        var name = this.id.toString().split("-")[1];
+        $( "#amount-"+name ).html( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
       }
     });
-
-    $( "#amount" ).val( $( "#slider-range-min" ).slider( "value" ) );
+    $( "#amount-"+i.toString() ).html( "$" + $( "#sliderrange-"+i.toString() ).slider( "values", 0 ) +
+      " - $" + $( "#sliderrange-"+i.toString() ).slider( "values", 1 ) );
+   }
   });
-    */
-
 </script>

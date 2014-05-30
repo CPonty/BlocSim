@@ -38,6 +38,7 @@ def timestamp():
 
 
 class Globals(object):
+    DBG_CV = True
     DBG_MQTT = False
     DBG_LOCK = False
     DBG_DB = True
@@ -57,6 +58,7 @@ class Globals(object):
     def __init__(self):
         self.camLock = RLock()
         self.frameLock = RLock()
+        self.frameSetLock = RLock()
         self.dbLock = RLock()
         self.bmdLock = RLock()
         self.db = None
@@ -454,8 +456,14 @@ class Webcam(object):
         self.cam_id = Webcam.CAMID
         self.ret = True
 
+        self.frameSet = {}
         self.bmd_data = {}
         self.sim_data = {}
+
+        self.do_process_webcam = True
+        self.do_process_cv = True
+        self.do_process_bmd = True
+        self.do_process_sim = True
 
         self.frame = C.zeros(depth=3)
         #self.frameAsJpeg = None
@@ -568,36 +576,73 @@ class Webcam(object):
     def process_loop(self):
         while True:
             # Wait for frame
-            if self.stopEvent.isSet(): break
             self.processEvent.wait()
             self.processEvent.clear()
             if self.stopEvent.isSet(): break
-            #
-            #TODO
-            #
-            self.fps2_update()
+
+            if self.do_process_cv:
+                self.cv_process()
             if self.stopEvent.isSet(): break
-            # Publish: Mosquitto
-            bmd_data = {
+
+            if self.do_process_bmd:
+                with G.bmdLock:
+                    blocsim_msg = json.dumps(self.bmd_data)
+                MQ.publish(topic=MQ.TOPIC_BLOCSIM, msg=blocsim_msg)
+            if self.stopEvent.isSet(): break
+
+            if self.do_process_sim:
+                self.sim_process()
+                with G.bmdLock:
+                    adapter_msg = json.dumps(self.sim_data)
+                MQ.publish(topic=MQ.TOPIC_ADAPTERS[0], msg=adapter_msg)
+            if self.stopEvent.isSet(): break
+
+    def cv_process(self):
+        #
+        #TODO cv processing
+        #
+        self.fps2_update()
+        with G.bmdLock:
+            self.bmd_data = {
                 "type": "blocsim",
                 "blocks": [],
                 "joiners": [],
                 "timestamp": timestamp()
             }
-            sim_data = {
+            #
+            #TODO populate the BMD lists using cv data
+            #
+
+    def sim_process(self):
+        with G.bmdLock:
+            self.sim_data = {
                 "type": "digital-logic",
                 "blocks": [],
                 "joiners": [],
                 "timestamp": timestamp()
             }
-            with G.bmdLock:
-                self.bmd_data = bmd_data
-                self.sim_data = sim_data
-            blocsim_msg = json.dumps(bmd_data)
-            adapter_msg = json.dumps(sim_data)
-            MQ.publish(topic=MQ.TOPIC_BLOCSIM, msg=blocsim_msg)
-            MQ.publish(topic=MQ.TOPIC_ADAPTERS[0], msg=adapter_msg)
-        pass
+            #
+            #TODO populate the SIM lists using BMD data
+            #
+
+
+    def frame_from_id(self, frameId):
+        #if G.DBG_CV: logging.debug("frame_from_id %d" % frameId)
+        if frameId in self.frameSet:
+            with G.frameSetLock:
+                rgb = cv2.cvtColor(W.frameSet[frameId], cv2.COLOR_BGR2RGB)
+        else:
+            # serve a 'blank' type screen
+            with G.frameLock:
+                rgb = W.frameRaw.copy()
+            h, w = rgb.shape[:2]
+            rgb /= 2
+            cv2.line(rgb, (0+10, 0+10), (w-10, h-10), (125,255,125), 2)
+            cv2.line(rgb, (w-10, 0+10), (0+10, h-10), (125,255,125), 2)
+            cv2.putText(rgb, str(frameId), (0, int(h*0.5)+30), cv2.FONT_HERSHEY_SIMPLEX, 5, (255,255,255))
+            rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
+
+        return rgb
 
 W = Webcam()
 
@@ -739,10 +784,12 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
 
         sendData = {
             "data": {
+                    "id": self.id,
                     "time": timestamp(),
                     "fps-webcam": "%.2f" % W.fps,
                     "fps-processing": "%.2f" % W.fps2,
-                    "frame-counter": W.frameN
+                    "frame-counter": W.frameN,
+                    "webcam-connected": not(W.cam is None) and W.ret
             },
             "db": db,
             "bmd": bmd,
@@ -820,9 +867,20 @@ class StreamViewer(tornado.web.RequestHandler):
 class FrameHandler(tornado.web.RequestHandler):
     """Serve the last webcam frame (one-off image)"""
     def get(self):
-        #self.redirect("/static/images/frame.jpg")
-        with G.frameLock:
-            rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
+        frameId = self.get_argument("id", default=None, strip=False)
+        rgb = None
+        if frameId is None:
+            logging.debug("Serving raw frame")
+            with G.frameLock:
+                rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
+        else:
+            logging.debug("Serving frame ID "+str(frameId))
+            try:
+                frameId=int(frameId)
+                rgb = W.frame_from_id(frameId)
+            except TypeError:
+                logging.warning("Invalid frame ID: must be numeric")
+                rgb = C.zeros()
         jpeg = Image.fromarray(rgb)
         ioBuf = StringIO.StringIO()
         jpeg.save(ioBuf, 'JPEG')
