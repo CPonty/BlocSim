@@ -58,22 +58,30 @@ Webcam
         </iframe>-->
 
         <form id="reservation">
-          <label for="webcam-tab-frame-name">Display Image: &nbsp; </label>
-          <select name="frame-name-id" id="webcam-tab-frame-name">
-            <option>A</option>
-            <option>B</option>
-            <option>C</option>
-            <option>D</option>
-            <option>E</option>
-            <option>F</option>
-            <option>G</option>
-            <option>H</option>
-            <option>I</option>
-            <option>J</option>
-            <option>K</option>
-            <option>L</option>
-            <option>M</option>
-          </select>
+            <label for="webcam-tab-frame-name">Display Image: &nbsp; </label>
+            <select name="frame-name-id" id="webcam-tab-frame-name">
+                <option>Raw Frame</option>
+
+                <option>(Green) Color Backprojection</option>
+                <option>(Green) Mask - Thresholded & filtered</option>
+                <option>(Green) Object Detection</option>
+
+                <option>(Red) Color Backprojection</option>
+                <option>(Red) Mask - Thresholded & filtered</option>
+                <option>(Red) Object Detection</option>
+
+                <option>(Black) Color Backprojection</option>
+                <option>(Black) Mask - Thresholded & filtered</option>
+                <option>(Black) Object Detection</option>
+                <option>(Black) Object Dilation</option>
+
+                <option>(Blocks) Only red objects containing green object</option>
+                <option>(Nodes) Intersection of Red object and dilated Black object mask</option>
+                <option>(Nodes) Only black objects containing nodes</option>
+
+                <option>(Nodes) Overlay on colour image</option>
+                <option>(Nodes) Overlay 2</option>
+            </select>
         </form>
         <div style="width:100%">
             <!--
@@ -100,34 +108,69 @@ Webcam
 </a>
 <hr/>
 <div id="calib-tab-panel" class="tab-accordion-area textspan">
-    <div>
+    <div id="slider-override-div">
         <div class="slider-clustered">
             <div style="margin-bottom: 1em">
-                <span>Price range:</span>
+                <span id="label-0" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-0" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-0"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-1" style="margin-right: 5px; font-weight: bold">range:</span>
                 <span id="amount-1" style="border:0; color:#f6931f; font-weight:bold;"></span>
             </div>
             <div id="sliderrange-1"></div>
         </div>
         <div class="slider-clustered">
             <div style="margin-bottom: 1em">
-                <span>Price range:</span>
+                <span id="label-2" style="margin-right: 5px; font-weight: bold">range:</span>
                 <span id="amount-2" style="border:0; color:#f6931f; font-weight:bold;"></span>
             </div>
             <div id="sliderrange-2"></div>
         </div>
         <div class="slider-clustered">
             <div style="margin-bottom: 1em">
-                <span>Price range:</span>
+                <span id="label-3" style="margin-right: 5px; font-weight: bold">range:</span>
                 <span id="amount-3" style="border:0; color:#f6931f; font-weight:bold;"></span>
             </div>
             <div id="sliderrange-3"></div>
         </div>
         <div class="slider-clustered">
             <div style="margin-bottom: 1em">
-                <span>Price range:</span>
+                <span id="label-4" style="margin-right: 5px; font-weight: bold">range:</span>
                 <span id="amount-4" style="border:0; color:#f6931f; font-weight:bold;"></span>
             </div>
             <div id="sliderrange-4"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-5" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-5" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-5"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-6" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-6" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-6"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-7" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-7" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-7"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-8" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-8" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-8"></div>
         </div>
     </div>
     <br/>
@@ -157,7 +200,7 @@ Webcam
     var select = $( "#webcam-tab-frame-name" );
     var slider = $( "#webcam-tab-frame-slider" ).slider({
       min: 0,
-      max: 12,
+      max: 15,
       range: "min",
       value: select[ 0 ].selectedIndex,
       slide: function( event, ui ) {
@@ -172,20 +215,23 @@ Webcam
     });
   });
 
+ var sliderNames = ["black_sat", "black_val", "green_hue", "red_hue", "color_sat", "hsv_thresh", "kernel_k","dot_size",
+                    "area_ratio"];
  $(function() {
-   for (var i=1; i<=4; i++) {
+   for (var i=0; i<sliderNames.length; i++) {
     $( "#sliderrange-"+i.toString() ).slider({
       range: true,
       min: 0,
-      max: 500,
-      values: [ 75, 300 ],
+      max: 100,
+      values: [ 0, 66 ],
       slide: function( event, ui ) {
         var name = this.id.toString().split("-")[1];
-        $( "#amount-"+name ).html( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
+        $( "#amount-"+name ).html( "" + ui.values[ 0 ] + " - " + ui.values[ 1 ] );
       }
     });
-    $( "#amount-"+i.toString() ).html( "$" + $( "#sliderrange-"+i.toString() ).slider( "values", 0 ) +
-      " - $" + $( "#sliderrange-"+i.toString() ).slider( "values", 1 ) );
+    $( "#amount-"+i.toString() ).html( "" + $( "#sliderrange-"+i.toString() ).slider( "values", 0 ) +
+      " - " + $( "#sliderrange-"+i.toString() ).slider( "values", 1 ) );
+    $( "#label-"+i.toString() ).html( "" + sliderNames[i]);
    }
   });
 </script>

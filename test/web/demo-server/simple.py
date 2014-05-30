@@ -52,7 +52,7 @@ class Globals(object):
     PATH_DEFAULTS = "config/defaults.db"
     PATH_CONFIG = "config/config.db"
     PERSISTENCE = True
-    SYNC_WITH_DISK = False
+    AUTO_SYNC_WITH_DISK = False
     FORCE_REGEN = True
 
     def __init__(self):
@@ -83,13 +83,14 @@ class Globals(object):
 
         if Globals.FORCE_REGEN:
             self.gen_defaults()
+            self.save_db()
 
     def load_db(self):
-        self.db = pickledb.load(Globals.PATH_CONFIG, Globals.SYNC_WITH_DISK)
+        self.db = pickledb.load(Globals.PATH_CONFIG, Globals.AUTO_SYNC_WITH_DISK)
         if Globals.DBG_DB: logging.info("db: load_db ({} items loaded)".format(len(self.db.db)))
 
     def load_defaults(self):
-        self.db = pickledb.load(Globals.PATH_DEFAULTS, Globals.SYNC_WITH_DISK)
+        self.db = pickledb.load(Globals.PATH_DEFAULTS, Globals.AUTO_SYNC_WITH_DISK)
         if Globals.DBG_DB: logging.info("db: load_defaults ({} items loaded)".format(len(self.db.db)))
 
     def save_db(self):
@@ -874,7 +875,7 @@ class FrameHandler(tornado.web.RequestHandler):
             with G.frameLock:
                 rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
         else:
-            logging.debug("Serving frame ID "+str(frameId))
+            #if G.DBG_CV: logging.debug("Serving frame ID "+str(frameId))
             try:
                 frameId=int(frameId)
                 rgb = W.frame_from_id(frameId)
