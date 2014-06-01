@@ -36,7 +36,7 @@ blocsim_vars = {
 	cv: {mode: 1},
 	bmd: {mode: 1},
 	server_running: true,
-	frame_reload_delay: 20,
+	frame_reload_delay: 1, //20
 	time_last_frame: time_ms(),
 	debug_sockjs: false,
 	max_resolution: 3
@@ -203,7 +203,7 @@ function shutdown() {
 
 function frame_reload() {
     $( "#frame" ).attr('src', 
-    	"frame.jpg?id="+$( "#webcam-tab-frame-slider" ).slider("option", "value").toString()+"#"+time_ms()
+    	"frame.jpg?id="+$( "#webcam-tab-frame-name" )[0].selectedIndex.toString()+"#"+time_ms()
     );
 }
 
@@ -355,9 +355,10 @@ sockjs_connect = function() {
 	    //console.log('message', e.data);
 	    if (blocsim_vars.debug_sockjs) console.log('websocket rx');
 	    var received = $.parseJSON(e.data);
-	    var allMinusDb = jQuery.extend(true, {}, received);
-	    allMinusDb.db = "...";
-	    var allText = JSON.stringify(allMinusDb, undefined, 4);
+	    var allMinusBigData = jQuery.extend(true, {}, received);
+	    allMinusBigData.db = "...";
+	    allMinusBigData.frame = "...";
+	    var allText = JSON.stringify(allMinusBigData, undefined, 4);
 	    var dbText = JSON.stringify(received.db, undefined, 4);
 	    var bmdText = JSON.stringify(received.bmd, undefined, 4);
 	    var simText = JSON.stringify(received.sim, undefined, 4);
@@ -367,6 +368,10 @@ sockjs_connect = function() {
 	    $( "#simTextBmd-tab-panel" ).html(syntaxHighlight(bmdText));
 	    $( "#simTextLogic-tab-panel" ).html(syntaxHighlight(simText));
 	    $( "#client-id-span" ).html(' # '+received.data.id);
+	    if ("frame" in received) {
+	    	$( "#frame" ).attr('src',
+	    		"data:image/jpg;base64,"+received.frame);
+		}
 	    
 	    //console.log(html);
 	    //console.log(e.data);

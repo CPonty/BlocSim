@@ -53,47 +53,55 @@ Webcam
     -->
     <!--<div style="clear:both"> &nbsp; </div>-->
     <!--<br/>-->
-    <div id="webcam-tab-frame-container">
-        <!--<iframe name="webcam-tab-frame-iframe" src="/ajax" frameborder="0" scrolling="auto" width="1920" height="1080" marginwidth="0" marginheight="0" >
-        </iframe>-->
 
-        <form id="reservation">
-            <label for="webcam-tab-frame-name">Display Image: &nbsp; </label>
-            <select name="frame-name-id" id="webcam-tab-frame-name">
-                <option>Raw Frame</option>
 
-                <option>(Green) Color Backprojection</option>
-                <option>(Green) Mask - Thresholded & filtered</option>
-                <option>(Green) Object Detection</option>
 
-                <option>(Red) Color Backprojection</option>
-                <option>(Red) Mask - Thresholded & filtered</option>
-                <option>(Red) Object Detection</option>
 
-                <option>(Black) Color Backprojection</option>
-                <option>(Black) Mask - Thresholded & filtered</option>
-                <option>(Black) Object Detection</option>
-                <option>(Black) Object Dilation</option>
 
-                <option>(Blocks) Only red objects containing green object</option>
-                <option>(Nodes) Intersection of Red object and dilated Black object mask</option>
-                <option>(Nodes) Only black objects containing nodes</option>
+    <form id="reservation">
+        <label for="webcam-tab-frame-name">Display Image: &nbsp; </label>
+        <select name="frame-name-id" id="webcam-tab-frame-name">
+            <option>Raw Frame</option>
 
-                <option>(Nodes) Overlay on colour image</option>
-                <option>(Nodes) Overlay 2</option>
-            </select>
-        </form>
-        <div style="width:100%">
-            <!--
-            <p>
-                <label for="amount">Display:</label>
-                <input type="text" id="amount" style="border:0; color:#f6931f; font-weight:bold;">
-            </p>
-            -->
-            <div id="webcam-tab-frame-slider" style="width: 94%; left:3%; right:3%; margin-bottom: 1em; margin-top: 1em"></div>
+            <option>(Green) Color Backprojection</option>
+            <option>(Green) Mask - Thresholded & filtered</option>
+            <option>(Green) Object Detection</option>
+
+            <option>(Red) Color Backprojection</option>
+            <option>(Red) Mask - Thresholded & filtered</option>
+            <option>(Red) Object Detection</option>
+
+            <option>(Black) Color Backprojection</option>
+            <option>(Black) Mask - Thresholded & filtered</option>
+            <option>(Black) Object Detection</option>
+            <option>(Black) Object Dilation</option>
+
+            <option>(Blocks) Only red objects containing green object</option>
+            <option>(Nodes) Intersection of Red object and dilated Black object mask</option>
+            <option>(Nodes) Only black objects containing nodes</option>
+
+            <option>(Nodes) Overlay on colour image</option>
+            <option>(Nodes) Overlay 2</option>
+        </select>
+    </form>
+    <div style="width:100%">
+        <!--
+        <p>
+            <label for="amount">Display:</label>
+            <input type="text" id="amount" style="border:0; color:#f6931f; font-weight:bold;">
+        </p>
+        -->
+        <div id="webcam-tab-frame-slider" style="width: 94%; left:3%; right:3%; margin-bottom: 1em; margin-top: 1em"></div>
+
+        <div id="webcam-tab-frame-container" style="width:100%">
+            <!--<iframe name="webcam-tab-frame-iframe" src="/ajax" frameborder="0" scrolling="auto" width="1920" height="1080" marginwidth="0" marginheight="0" >
+            </iframe>-->
+
+
+            <div style="max-width:100%;"><!--min-height: 480px; max-height: 100%; -->
+                <img id='frame' src='frame.jpg' class="sidebar-left" style="max-width: 100%; max-height: 100%; border: 2px solid black">
+            </div>
         </div>
-
-        <img id='frame' src='frame.jpg' class="sidebar-left" style="max-width: 100%; max-height: 100%; border: 2px solid black">
 
     </div>
     <br/>

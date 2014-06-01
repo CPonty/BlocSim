@@ -30,6 +30,7 @@ import shutil
 import pickledb
 import mosquitto
 from time import strftime
+import base64
 
 def timestamp():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%.%f")
@@ -432,12 +433,12 @@ C = CV()
 
 
 class Webcam(object):
-    FPS_ON = 15  # limit FPS when processing is on
-    FPS_OFF = 30
+    FPS_ON = 10  # limit FPS when processing is on
+    FPS_OFF = 10
     FPS_RECORD_LEN = 20
     FPS_UPDATE_INTERVAL = 1
     AUTO_CONNECT = True
-    FORCE_RESIZE = False
+    FORCE_RESIZE = True
     CAMID = 0
 
     resolutions = [480, 720, 1080]
@@ -743,7 +744,7 @@ WS = WebServer()
 class SockJSHandler(sockjs.tornado.SockJSConnection):
     """Chat connection implementation"""
     # Class level variable
-    BROADCAST_PERIOD = 100  # ms
+    BROADCAST_PERIOD = 200  # ms
     DBG_VERBOSE = False
     sock_clients = set()
     data = dict()
@@ -783,23 +784,41 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
             bmd = W.bmd_data
             sim = W.sim_data
 
+        with G.frameLock:
+            #rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
+            #rgb = C.resize_fixed(W.frameRaw,640,480)
+            rgb = W.frameRaw.copy()
+        ret, JpegData = cv2.imencode(".jpeg",rgb, (int(cv2.IMWRITE_JPEG_QUALITY),50))
+        JpegData = np.ndarray.tostring(JpegData, np.uint8)
+
+        #rgb = C.resize_fixed(rgb,320,240)
+        #jpeg = Image.fromarray(rgb)
+        #ioBuf = StringIO.StringIO()
+        #jpeg.save(ioBuf, 'JPEG')
+        #ioBuf.seek(0)
+        #encoded = base64.b64encode(ioBuf.read())
+
+        encoded = base64.b64encode(JpegData)
+
         sendData = {
             "data": {
                     "id": self.id,
                     "time": timestamp(),
+                    "webcam-connected": not(W.cam is None) and W.ret,
                     "fps-webcam": "%.2f" % W.fps,
                     "fps-processing": "%.2f" % W.fps2,
                     "frame-counter": W.frameN,
-                    "webcam-connected": not(W.cam is None) and W.ret
+                    "frame-size": "%.2f KB" % (len(JpegData)/1024.)
             },
+            "frame": encoded,
             "db": db,
             "bmd": bmd,
             "sim": sim,
+            #"frame" : "",
             "errors": []
         }
-        #
-        #
-        sendText = json.dumps(sendData)   # , sort_keys=True, indent=4, separators=(',', ': '))
+
+        sendText = json.dumps(sendData, sort_keys=True)   # , sort_keys=True, indent=4, separators=(',', ': '))
         self.send(sendText)
 
     def on_message(self, message):
@@ -882,6 +901,9 @@ class FrameHandler(tornado.web.RequestHandler):
             except TypeError:
                 logging.warning("Invalid frame ID: must be numeric")
                 rgb = C.zeros()
+        rgb = C.resize_fixed(rgb,640,480)
+        #rgb = C.resize_fixed(rgb,320,240)#TODO tiny images = sanic speeds
+        #rgb = C.resize_fixed(rgb,160,120)
         jpeg = Image.fromarray(rgb)
         ioBuf = StringIO.StringIO()
         jpeg.save(ioBuf, 'JPEG')
@@ -890,6 +912,35 @@ class FrameHandler(tornado.web.RequestHandler):
         self.write(ioBuf.read())
         self.finish()
 
+
+class MJPEGHandler(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def get(self):
+        loop = tornado.ioloop.IOLoop.current()
+        self.served_image_timestamp = time()
+        my_boundary = "--myboundary--\n"
+        while True:
+            timestamp = time()
+            rgb = W.frame_from_id(0)
+            rgb = C.resize_fixed(rgb,320,240)#TODO tiny images = sanic speeds
+            jpeg = Image.fromarray(rgb)
+            ioBuf = StringIO.StringIO()
+            jpeg.save(ioBuf, 'JPEG')
+            ioBuf.seek(0)
+            buf = ioBuf.read()
+
+            if self.served_image_timestamp < timestamp:
+                self.write(my_boundary)
+                self.write("Content-type: image/jpeg\r\n")
+                self.write("Content-length: %s\r\n\r\n" % len(buf))
+                self.write(str(buf))
+                self.served_image_timestamp = timestamp
+                yield tornado.gen.Task(self.flush)
+            else:
+                yield tornado.gen.Task(loop.add_timeout, loop.time() + 0.02)
+
+"""
 class MJPEGHandler(tornado.web.RequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
@@ -897,25 +948,23 @@ class MJPEGHandler(tornado.web.RequestHandler):
         loop = tornado.ioloop.IOLoop.current()
         self.t = time()
         i = 0
+        self.set_status(200)
+        self.add_header('Content-type','multipart/x-mixed-replace; boundary=--jpgboundary')
         while True:
             i += 1
             logging.info("looping "+str(i))
-            t2 = time()
             with G.frameLock:
                 rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
             jpeg = Image.fromarray(rgb)
             ioBuf = StringIO.StringIO()
             jpeg.save(ioBuf, 'JPEG')
             ioBuf.seek(0)
-            if self.t < t2:
-                self.write("--jpgboundary--\n")
-                self.write("Content-type: image/jpeg\r\n")
-                self.write("Content-length: %s\r\n\r\n" % str(ioBuf.len))
-                self.write(ioBuf.read())
-                self.t = t2
-                yield tornado.gen.Task(self.flush)
-            else:
-                yield tornado.gen.Task(loop.add_timeout, loop.time() + 0.05)
+            self.write("--jpgboundary\n")
+            self.add_header("Content-type", "image/jpeg")
+            self.add_header("Content-length", str(ioBuf.len))
+            self.write(ioBuf.read())
+            yield tornado.gen.Task(self.flush)
+"""
 
 """
     def gen_image(self, arg, callback):
