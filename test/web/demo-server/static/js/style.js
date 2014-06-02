@@ -63,7 +63,7 @@ $(function() {
   */
   $( ".accordion" ).accordion({heightStyle: "content"});
   $( ".buttonset" ).buttonset();
-  $( ".tabs" ).tabs({event: "click"}).css("border", "none"); // mouseover for hover-tabs
+  $( ".tabs" ).tabs({event: "mouseover"}).css("border", "none"); // mouseover for hover-tabs
   $( "#server-indicator" ).css("background-color", "#00cc00");
   $( "#webcam-indicator" ).css("background-color", "#f6931f");
   //console.log($(".tabs a"))
@@ -85,6 +85,7 @@ $(function() {
     $( ".sidebar-table" ).hide();
   if (blocsim_vars.autoexpand_tabs==false)
     $( ".tab-accordion-area" ).hide();
+  $( "#keystore-tab-panel" ).hide();
 
 
   /* Bind some animation-related click events */

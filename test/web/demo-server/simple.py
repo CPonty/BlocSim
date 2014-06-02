@@ -35,6 +35,9 @@ import base64
 def timestamp():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%.%f")
 
+def timestamp_ms():
+    return int(round(time() * 1000))
+
 #======================================================================
 
 
@@ -44,7 +47,7 @@ class Globals(object):
     DBG_LOCK = False
     DBG_DB = True
     DBG_FPS = False
-    DBG_SOCKET = True
+    DBG_SOCKET = False
     LOG_LEVEL = logging.DEBUG
 
     TEST_CV = False
@@ -54,7 +57,7 @@ class Globals(object):
     PATH_CONFIG = "config/config.db"
     PERSISTENCE = True
     AUTO_SYNC_WITH_DISK = False
-    FORCE_REGEN = True
+    FORCE_REGEN = False
 
     def __init__(self):
         self.camLock = RLock()
@@ -75,16 +78,20 @@ class Globals(object):
             shutil.copyfile(Globals.PATH_DEFAULTS, Globals.PATH_CONFIG)
 
         self.load_db()
+        """
         if len(self.db.db) == 0:
             self.load_defaults()
         if len(self.db.db) == 0:
             self.gen_defaults()
             #self.save_defaults()
-            self.save_db()
+            #self.save_db()
+        """
 
         if Globals.FORCE_REGEN:
             self.gen_defaults()
-            self.save_db()
+            #self.save_db()
+
+        #if self.DBG_DB: print self.db.db
 
     def load_db(self):
         self.db = pickledb.load(Globals.PATH_CONFIG, Globals.AUTO_SYNC_WITH_DISK)
@@ -128,6 +135,8 @@ class Globals(object):
 
         # min, max, v1, v2, range_type
         #
+        self.db.set("bounds_x", [0,100, 0,100, True])
+        self.db.set("bounds_y", [0,100, 0,100, True])
         self.db.set("black_sat", [0,255, 0,30, "min"])
         self.db.set("black_val", [0,255, 0,30, "min"])
         self.db.set("green_hue", [0,180, 50,70, True])
@@ -137,7 +146,7 @@ class Globals(object):
         self.db.set("hsv_thresh", [0,255, 0,80, "min"])
         self.db.set("kernel_k", [0,50, 0,10, "min"])
         self.db.set("dot_size", [0,255, 30,100, True])
-        self.db.set("rectangle_area_ratio", [1,100, 90,100, "max"])
+        self.db.set("area_ratio", [1,100, 90,100, "max"])
         if Globals.DBG_DB: logging.info("db: gen_defaults ({} items created)".format(len(self.db.db)))
 
 G = Globals()
@@ -433,13 +442,14 @@ C = CV()
 
 
 class Webcam(object):
-    FPS_ON = 10  # limit FPS when processing is on
-    FPS_OFF = 10
+    FPS_ON = 5  # limit FPS when processing is on
+    FPS_OFF = 5
     FPS_RECORD_LEN = 20
     FPS_UPDATE_INTERVAL = 1
     AUTO_CONNECT = True
     FORCE_RESIZE = True
-    CAMID = 0
+    RESIZE_SIZE = 480
+    CAMID = 1
 
     resolutions = [480, 720, 1080]
 
@@ -458,6 +468,11 @@ class Webcam(object):
         self.cam_id = Webcam.CAMID
         self.ret = True
 
+        self.histBar = np.zeros((5,256),np.uint8)
+        self.histBar.fill(255)
+
+        self.inputFromFile = False
+
         self.frameSet = {}
         self.bmd_data = {}
         self.sim_data = {}
@@ -475,6 +490,8 @@ class Webcam(object):
         self.frameRaw = C.zeros(depth=3)
         self.frameRawW = C.minW
         self.frameRawH = C.minH
+
+        self.resizeSize = Webcam.RESIZE_SIZE
 
         self.cvThread = Thread(target=self.capture_loop)
         self.timerThread = Thread(target=self.timer_loop)
@@ -536,22 +553,32 @@ class Webcam(object):
             if G.DBG_LOCK: print "cv_loop wait camLock... ",
             with G.camLock:
                 if G.DBG_LOCK: print "using lock"
-                if self.cam:
-                    self.ret, f = self.cam.read()
+                if self.cam and self.do_process_webcam:
+                    if self.inputFromFile:
+                        self.ret = True
+                        try:
+                            f = cv2.imread('frame.jpg')
+                        except:
+                            logging.error("Could not load frame.jpg")
+                            WS.stop()
+                            break
+                    else:
+                        self.ret, f = self.cam.read()
             if self.stopEvent.isSet(): break
             if (self.ret == False) and (self.cam):
                 self.cam = None
                 logging.warning("CV2 camera disconnect")
                 #TODO
-            if self.cam:
+            if self.cam and self.do_process_webcam:
                 self.frameRawH, self.frameRawW = f.shape[:2]
+                f = C.resize_max(f, self.resizeSize)
             if G.DBG_LOCK: print "cv_loop wait frameLock... ",
             with G.frameLock:
                 if G.DBG_LOCK: print "using lock"
-                if self.cam:
+                if self.cam and self.do_process_webcam:
                     self.frameRaw = f
-                    if self.FORCE_RESIZE:
-                        self.frameRaw = C.resize_fixed(f)
+                    #if self.FORCE_RESIZE:
+                        #self.frameRaw = C.resize_max(f, self.resizeSize)
                     self.processEvent.set()
                     """ removed the .copy() - nobody's going to modify f,
                         and it will be discarded next frame anyway.
@@ -603,13 +630,147 @@ class Webcam(object):
         #
         #TODO cv processing
         #
+        """
+        self.db.set("bounds_x", [0,100, 0,100, True])
+        self.db.set("bounds_y", [0,100, 0,100, True])
+        self.db.set("black_sat", [0,255, 0,30, "min"])
+        self.db.set("black_val", [0,255, 0,30, "min"])
+        self.db.set("green_hue", [0,180, 50,70, True])
+        self.db.set("red_hue", [0,180, 0,20, True])
+        self.db.set("color_sat", [0,255, 80,255, "max"])
+        self.db.set("color_val", [0,255, 80,255, "max"])
+        self.db.set("hsv_thresh", [0,255, 0,80, "min"])
+        self.db.set("kernel_k", [0,50, 0,10, "min"])
+        self.db.set("dot_size", [0,255, 30,100, True])
+        self.db.set("area_ratio", [1,100, 90,100, "max"])
+        """
+        with G.dbLock:
+            dbcopy = G.db.db.copy()
+        db = type('', (), {})()
+        for k,v in dbcopy.iteritems():
+            #db.k = v[2:4]
+            setattr(db, k, v[2:4])
+
+        with G.frameSetLock:
+            self.frameSet[0] = self.frameRaw.copy()
+        f = self.frameSet[0].copy()
+        w = f.shape[1]
+        h = f.shape[0]
+
+        black=np.zeros((h,w),np.uint8)
+        hist=np.zeros((180,256),np.uint8)
+        roiHistRed= cv2.calcHist(black, [0,1], None, [180,256], [0,180,0,256])
+        roiHistRed[:,:] = 0
+        roiHistGrn = roiHistRed.copy()
+        roiHistBlk = cv2.calcHist(black, [1,2], None, [256,256], [0,256,0,256])
+        roiHistBlk[:,:] = 0
+        # colors use sat, hue
+        cv2.rectangle(roiHistRed,(db.color_sat[0],0),(db.color_sat[1],db.red_hue[0]),255,-1)
+        cv2.rectangle(roiHistRed,(db.color_sat[0],db.red_hue[1]),(db.color_sat[1],180),255,-1)
+        cv2.rectangle(roiHistGrn,(db.color_sat[0],db.green_hue[0]),(db.color_sat[1],db.green_hue[1]),255,-1)
+        # black uses val, sat
+        cv2.rectangle(roiHistBlk,(db.black_val[0],db.black_sat[0]),(db.black_val[1],db.black_sat[1]),255,-1)
+        #cv2.rectangle(roiHist2,(140,174),(250,180),255,-1)
+        #cv2.rectangle(roiHist2,(140,0),(250,3),255,-1)
+
+        cv2.rectangle(f,(0,0),(int(db.bounds_x[0]/100.0*w),h),(255,255,255),-1)
+        cv2.rectangle(f,(0,0),(w,int(db.bounds_y[0]/100.0*h)),(255,255,255),-1)
+        cv2.rectangle(f,(0,int((db.bounds_y[1])/100.0*h)),(w,h),(255,255,255),-1)
+        cv2.rectangle(f,(int((db.bounds_x[1])/100.0*w),0),(w,h),(255,255,255),-1)
+        #cv2.rectangle(f,(0,0),(int(db.bounds_x[0]/100.0*w),h),(255,255,255),-1)
+
+        for i in [1,4,7,8,11,12,13,14,15,16]:
+            with G.frameSetLock:
+                self.frameSet[i] = f.copy()
+
+        #bw_red =         thresh = cv2.inRange(hsv,np.array((h0,s0,v0)), np.array((h0,s1,v1)))
+
+        #histStack = np.vstack((roiHistRed, self.histBar, roiHistGrn, self.histBar, roiHistBlk))
+        #with G.frameSetLock:
+        #    self.frameSet[1] = cv2.cvtColor(histStack, cv2.COLOR_GRAY2BGR)
+
+        # red
+        hsvt = cv2.cvtColor(f,cv2.COLOR_BGR2HSV)
+        hue,sat,val = cv2.split(hsvt)
+        dst = cv2.calcBackProject([hsvt],[0,1],roiHistRed,[0,180,0,256],1)
+        disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+        cv2.filter2D(dst,-1,disc,dst)
+        vmask = val.copy()
+        vmask[vmask < db.color_val[0]] = 0
+        vmask[vmask > db.color_val[0]] = 255
+        dst= cv2.bitwise_and(dst, vmask)
+        with G.frameSetLock:
+            self.frameSet[2] = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
+        ret,thresh = cv2.threshold(dst,db.hsv_thresh[1],255,0)
+        thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
+        f2 = cv2.bitwise_and(f,thresh3) #filtered image
+        with G.frameSetLock:
+            self.frameSet[3] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]),int(db.kernel_k[1])))
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]*1.5),int(db.kernel_k[1]*1.5)))
+        cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
+        cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
+        cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
+
+        # green
+        hsvt = cv2.cvtColor(f,cv2.COLOR_BGR2HSV)
+        hue,sat,val = cv2.split(hsvt)
+        dst = cv2.calcBackProject([hsvt],[0,1],roiHistGrn,[0,180,0,256],1)
+        disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+        cv2.filter2D(dst,-1,disc,dst)
+        vmask = val.copy()
+        vmask[vmask < db.color_val[0]] = 0
+        vmask[vmask > db.color_val[0]] = 255
+        dst= cv2.bitwise_and(dst, vmask)
+        with G.frameSetLock:
+            self.frameSet[5] = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
+        ret,thresh = cv2.threshold(dst,db.hsv_thresh[1],255,0)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]),int(db.kernel_k[1])))
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]*1.5),int(db.kernel_k[1]*1.5)))
+        cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
+        cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
+        cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
+
+        thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
+        f2 = cv2.bitwise_and(f,thresh3) #filtered image
+        with G.frameSetLock:
+            self.frameSet[6] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
+
+
+        """
+        hsvt = cv2.cvtColor(im,cv2.COLOR_BGR2HSV)
+        hue,sat,val = cv2.split(hsvt)
+        #print "hist avg",np.mean(trackingHist)
+        dst = cv2.calcBackProject([hsvt],[0,1],trackingHist,[0,180,0,256],1)
+        # Now convolute with circular disc
+        disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+        cv2.filter2D(dst,-1,disc,dst)
+        #print "dst max",np.max(dst),"hist avg",np.mean(trackingHist)
+#TODO minimum brightness
+        vmask = val.copy()
+        vmask[vmask < HSV_V0] = 0
+        vmask[vmask > 0] = 255
+        dst= cv2.bitwise_and(dst, vmask)
+
+        # threshold and binary AND
+        imArray[2] = dst #grayscale distance
+        ret,thresh = cv2.threshold(dst,threshVal,255,0)
+        imArray[3] = thresh
+        thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
+        img4 = cv2.bitwise_and(im,thresh3) #combined image
+        """
+
+        #
+        #
         self.fps2_update()
         with G.bmdLock:
             self.bmd_data = {
                 "type": "blocsim",
                 "blocks": [],
-                "joiners": [],
-                "timestamp": timestamp()
+                "connectors": [],
+                "nodes": [],
+                "timestamp": timestamp(),
+                "frame_id": self.frameN
             }
             #
             #TODO populate the BMD lists using cv data
@@ -619,9 +780,11 @@ class Webcam(object):
         with G.bmdLock:
             self.sim_data = {
                 "type": "digital-logic",
-                "blocks": [],
-                "joiners": [],
-                "timestamp": timestamp()
+                "gates": self.bmd_data["blocks"],
+                "wiring": self.bmd_data["connectors"],
+                "nodes": self.bmd_data["nodes"],
+                "timestamp": timestamp(),
+                "frame_id": self.frameN
             }
             #
             #TODO populate the SIM lists using BMD data
@@ -632,7 +795,8 @@ class Webcam(object):
         #if G.DBG_CV: logging.debug("frame_from_id %d" % frameId)
         if frameId in self.frameSet:
             with G.frameSetLock:
-                rgb = cv2.cvtColor(W.frameSet[frameId], cv2.COLOR_BGR2RGB)
+                #rgb = cv2.cvtColor(W.frameSet[frameId], cv2.COLOR_BGR2RGB)
+                rgb = W.frameSet[frameId].copy()
         else:
             # serve a 'blank' type screen
             with G.frameLock:
@@ -642,7 +806,7 @@ class Webcam(object):
             cv2.line(rgb, (0+10, 0+10), (w-10, h-10), (125,255,125), 2)
             cv2.line(rgb, (w-10, 0+10), (0+10, h-10), (125,255,125), 2)
             cv2.putText(rgb, str(frameId), (0, int(h*0.5)+30), cv2.FONT_HERSHEY_SIMPLEX, 5, (255,255,255))
-            rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
+            #rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
 
         return rgb
 
@@ -755,13 +919,13 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         SockJSHandler.ID += 1
         self.id = SockJSHandler.ID
         self.state = dict()
-        self.state["name"] = ""
+        self.state["frame_id"] = 0
         #self.state["message"] = ""
         if G.DBG_SOCKET: logging.debug("SockJSHandler %d init" % self.id)
 
         # Setup the endless socket broadcast
         self.broadcast_timer = sockjs.tornado.periodic.Callback(
-            self.on_broadcast, SockJSHandler.BROADCAST_PERIOD, WS.io_loop
+            self.on_periodic, SockJSHandler.BROADCAST_PERIOD, WS.io_loop
         )
         self.broadcast_timer.start()
 
@@ -774,7 +938,7 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         # Add client to the clients list
         self.sock_clients.add(self)
 
-    def on_broadcast(self):
+    def on_periodic(self):
         if G.DBG_SOCKET and SockJSHandler.DBG_VERBOSE:  # printing this is pretty spammy...
             logging.debug("SockJSHandler %d broadcast: %s" % (self.id, str(datetime.datetime.now())))
 
@@ -784,10 +948,12 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
             bmd = W.bmd_data
             sim = W.sim_data
 
-        with G.frameLock:
+        #with G.frameLock:
             #rgb = cv2.cvtColor(W.frameRaw, cv2.COLOR_BGR2RGB)
             #rgb = C.resize_fixed(W.frameRaw,640,480)
-            rgb = W.frameRaw.copy()
+            #rgb = W.frameRaw.copy()
+
+        rgb = W.frame_from_id(self.state["frame_id"])
         ret, JpegData = cv2.imencode(".jpeg",rgb, (int(cv2.IMWRITE_JPEG_QUALITY),50))
         JpegData = np.ndarray.tostring(JpegData, np.uint8)
 
@@ -801,14 +967,17 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         encoded = base64.b64encode(JpegData)
 
         sendData = {
+            "type": "periodic",
             "data": {
-                    "id": self.id,
+                    "client_id": self.id,
                     "time": timestamp(),
-                    "webcam-connected": not(W.cam is None) and W.ret,
-                    "fps-webcam": "%.2f" % W.fps,
-                    "fps-processing": "%.2f" % W.fps2,
-                    "frame-counter": W.frameN,
-                    "frame-size": "%.2f KB" % (len(JpegData)/1024.)
+                    "webcam_connected": not(W.cam is None) and W.ret,
+                    "fps_webcam": "%.2f" % W.fps,
+                    "fps_processing": "%.2f" % W.fps2,
+                    "frame_counter": W.frameN,
+                    "frame_size": "%.2f KB" % (len(JpegData)/1024.),
+                    "frame_shape": "%d x %d (raw) / %d x %d (processed)" % (
+                        W.frameRawW, W.frameRawH, rgb.shape[1], rgb.shape[0])
             },
             "frame": encoded,
             "db": db,
@@ -827,16 +996,43 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         # Broadcast message
         data = json.loads(message)
         broadcast = dict()
-        for key, val in data.iteritems():
-            if key in self.state:
-                self.state[key] = val
-                broadcast[key] = val
-            else:
-                print "message %s: rejected key %s" % (message, key)
-        reply = json.dumps(broadcast)
+
+        #for key, val in data.iteritems():
+        #    if key in self.state:
+        #        self.state[key] = val
+        #        print "SOCKJS client %d: %s = %s" % (self.id, str(key), str(val))
+        #        broadcast[key] = val
+        #    else:
+        #        print "message %s: rejected key %s" % (message, key)
+        #reply = json.dumps(broadcast)
+        self.state["frame_id"] = data["frame_id"]
+        res = data["frame_res"]
+        if res==1:
+            W.resizeSize = 480
+        elif res==2:
+            W.resizeSize = 720
+        elif res==3:
+            W.resizeSize = 1080
+        else:
+            raise TypeError("Frame resolution invalid")
+        W.do_process_webcam = data["webcam_on"]
+        W.do_process_cv= data["cv_on"]
+        W.do_process_bmd= data["bmd_on"]
+        W.do_process_sim= data["sim_on"]
+        W.inputFromFile= data["input_from_file"]
+        with G.dbLock:
+            G.db.db = data["calib"]
+        #print message
+        """
+        "webcam_on" : blocsim_vars.webcam.mode < 3,
+        "cv_on" : blocsim_vars.cv.mode < 3,
+        "bmd_on" : blocsim_vars.bmd.mode < 3,
+        "sim_on" : blocsim_vars.sim.mode < 3,
+        "frame_res" : blocsim_vars.max_resolution
+        """
 
         #print message
-        self.broadcast(self.sock_clients, "Client %d:%s says: %s" % (self.id, self.state["name"], reply))
+        #self.broadcast(self.sock_clients, "Client %d:%s says: %s" % (self.id, self.state["name"], reply))
 
     def on_close(self):
         if G.DBG_SOCKET: logging.debug("SockJSHandler %d close" % self.id)
@@ -901,7 +1097,8 @@ class FrameHandler(tornado.web.RequestHandler):
             except TypeError:
                 logging.warning("Invalid frame ID: must be numeric")
                 rgb = C.zeros()
-        rgb = C.resize_fixed(rgb,640,480)
+        rgb = C.resize_max(rgb,W.resizeSize)
+        #rgb = C.resize_fixed(rgb,640,480)
         #rgb = C.resize_fixed(rgb,320,240)#TODO tiny images = sanic speeds
         #rgb = C.resize_fixed(rgb,160,120)
         jpeg = Image.fromarray(rgb)
@@ -1042,6 +1239,15 @@ class MJPEGHandler(tornado.web.RequestHandler):
             yield gen.Task(loop.add_timeout, loop.time() + 0.02)
         """
 
+class JSONConfigHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write('blocsim_calib = ')
+        with G.dbLock:
+            dbstr = json.dumps(G.db.db)
+        self.write(dbstr)
+        logging.debug("Sending db")
+        logging.debug(dbstr)
+        self.write(';')
 
 class RPCHandler(JSONRPCHandler):
 
@@ -1054,6 +1260,38 @@ class RPCHandler(JSONRPCHandler):
     def shutdown(self):
         WS.stop()
         return 'Server shutdown at '+str(datetime.datetime.now())
+
+    def save_image(self):
+        fname = "static/images/"+str(timestamp_ms())+".jpg"
+        with G.frameLock:
+            cv2.imwrite("static/images/frame.jpg", W.frameRaw)
+            cv2.imwrite(fname, W.frameRaw)
+        return "Image saved: "+fname
+
+    def get_config(self):
+        with G.dbLock:
+            db = G.db.db.copy()
+        return json.dumps(db)
+
+    def set_config(self, k, val):
+        with G.dbLock:
+            G.db.set(k, val)
+        return "Key %s set to %s" % (str(k), str(val))
+
+    def db_load(self):
+        with G.dbLock:
+            G.load_db()
+        return "Keystore database config.db reloaded"
+
+    def db_save(self):
+        with G.dbLock:
+            G.save_db()
+        return "Keystore database config.db saved"
+
+    def db_defaults(self):
+        with G.dbLock:
+            G.gen_defaults()
+        return "Keystore database regenerated"
 
     def cycle_webcam(self):
         #
@@ -1108,6 +1346,7 @@ if __name__ == "__main__":
         #(r'/images/(.*)', tornado.web.StaticFileHandler, {'path': WS.css_path}),
         #(r"/down", ShutdownHandler),
         #(r'/rpc/(.*)', HelloHandler),
+        (r'/config.js', JSONConfigHandler),
         (r'/stream.mjpg', MJPEGHandler),
         (r"/stream", StreamViewer),
         (r'/rpc', RPCHandler),
