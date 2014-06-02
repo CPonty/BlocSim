@@ -1,1 +1,1 @@
-{"hello": "world"}
+{"black_val": [0, 255, 0, 30, "min"], "area_ratio": [1, 100, 90, 100, "max"], "dot_size": [0, 255, 30, 100, true], "color_sat": [0, 255, 80, 255, "max"], "red_hue": [0, 180, 0, 20, true], "black_sat": [0, 255, 0, 30, "min"], "color_val": [0, 255, 80, 255, "max"], "hsv_thresh": [0, 255, 0, 80, "min"], "kernel_k": [0, 50, 0, 10, "min"], "green_hue": [0, 180, 50, 70, true]}

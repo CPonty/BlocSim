@@ -48,6 +48,7 @@ class Globals(object):
     DBG_DB = True
     DBG_FPS = False
     DBG_SOCKET = False
+    DBG_RPC = True
     LOG_LEVEL = logging.DEBUG
 
     TEST_CV = False
@@ -449,7 +450,7 @@ class Webcam(object):
     AUTO_CONNECT = True
     FORCE_RESIZE = True
     RESIZE_SIZE = 480
-    CAMID = 1
+    CAMID = -1
 
     resolutions = [480, 720, 1080]
 
@@ -673,10 +674,14 @@ class Webcam(object):
         #cv2.rectangle(roiHist2,(140,174),(250,180),255,-1)
         #cv2.rectangle(roiHist2,(140,0),(250,3),255,-1)
 
-        cv2.rectangle(f,(0,0),(int(db.bounds_x[0]/100.0*w),h),(255,255,255),-1)
-        cv2.rectangle(f,(0,0),(w,int(db.bounds_y[0]/100.0*h)),(255,255,255),-1)
-        cv2.rectangle(f,(0,int((db.bounds_y[1])/100.0*h)),(w,h),(255,255,255),-1)
-        cv2.rectangle(f,(int((db.bounds_x[1])/100.0*w),0),(w,h),(255,255,255),-1)
+        f = f[
+            int(db.bounds_y[0]/100.0*h) : int(db.bounds_y[1]/100.0*h),
+            int(db.bounds_x[0]/100.0*w) : int(db.bounds_x[1]/100.0*w)
+        ]
+        #cv2.rectangle(f,(0,0),(int(db.bounds_x[0]/100.0*w),h),(255,255,255),-1)
+        #cv2.rectangle(f,(0,0),(w,int(db.bounds_y[0]/100.0*h)),(255,255,255),-1)
+        #cv2.rectangle(f,(0,int((db.bounds_y[1])/100.0*h)),(w,h),(255,255,255),-1)
+        #cv2.rectangle(f,(int((db.bounds_x[1])/100.0*w),0),(w,h),(255,255,255),-1)
         #cv2.rectangle(f,(0,0),(int(db.bounds_x[0]/100.0*w),h),(255,255,255),-1)
 
         for i in [1,4,7,8,11,12,13,14,15,16]:
@@ -702,15 +707,15 @@ class Webcam(object):
         with G.frameSetLock:
             self.frameSet[2] = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
         ret,thresh = cv2.threshold(dst,db.hsv_thresh[1],255,0)
-        thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
-        f2 = cv2.bitwise_and(f,thresh3) #filtered image
-        with G.frameSetLock:
-            self.frameSet[3] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]),int(db.kernel_k[1])))
         kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]*1.5),int(db.kernel_k[1]*1.5)))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
+        thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
+        f2 = cv2.bitwise_and(f,thresh3) #filtered image
+        with G.frameSetLock:
+            self.frameSet[3] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
 
         # green
         hsvt = cv2.cvtColor(f,cv2.COLOR_BGR2HSV)
@@ -1252,46 +1257,64 @@ class JSONConfigHandler(tornado.web.RequestHandler):
 class RPCHandler(JSONRPCHandler):
 
     def helloworld(self, *args):
-        return "Hello world!"
+        msg = "Hello world!"
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def echo(self, s):
-        return s
+        msg = s
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def shutdown(self):
         WS.stop()
-        return 'Server shutdown at '+str(datetime.datetime.now())
+        msg = 'Server shutdown at '+str(datetime.datetime.now())
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def save_image(self):
         fname = "static/images/"+str(timestamp_ms())+".jpg"
         with G.frameLock:
             cv2.imwrite("static/images/frame.jpg", W.frameRaw)
             cv2.imwrite(fname, W.frameRaw)
-        return "Image saved: "+fname
+        msg = "Image saved: "+fname
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def get_config(self):
         with G.dbLock:
             db = G.db.db.copy()
-        return json.dumps(db)
+        msg = json.dumps(db)
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def set_config(self, k, val):
         with G.dbLock:
             G.db.set(k, val)
-        return "Key %s set to %s" % (str(k), str(val))
+        msg = "Key %s set to %s" % (str(k), str(val))
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def db_load(self):
         with G.dbLock:
             G.load_db()
-        return "Keystore database config.db reloaded"
+        msg = "Keystore database config.db reloaded"
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def db_save(self):
         with G.dbLock:
             G.save_db()
-        return "Keystore database config.db saved"
+        msg = "Keystore database config.db saved"
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def db_defaults(self):
         with G.dbLock:
             G.gen_defaults()
-        return "Keystore database regenerated"
+        msg = "Keystore database regenerated"
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 
     def cycle_webcam(self):
         #
@@ -1313,14 +1336,20 @@ class RPCHandler(JSONRPCHandler):
                     break
             camId = W.cam_id
         if (W.cam is None) or (not ret):
-            return "Failed to find a video source"
+            msg = "Failed to find a video source"
+            if G.DBG_RPC: logging.info("RPC: "+msg)
+            return msg
         else:
-            return 'Switched to next available video source: '+str(camId)
+            msg = 'Switched to next available video source: '+str(camId)
+            if G.DBG_RPC: logging.info("RPC: "+msg)
+            return msg
 
     def disconnect_webcam(self):
         with G.camLock:
             W.cam = None
-        return 'Disconnected video source'
+        msg = 'Disconnected video source'
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
 """
     def add(self, x, y):
         return x+y
