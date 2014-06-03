@@ -32,11 +32,20 @@ import mosquitto
 from time import strftime
 import base64
 
-def timestamp():
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%.%f")
+def timestamp(include_ms=True):
+    if include_ms:
+        return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%.%f")
+    else:
+        return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def timestamp_ms():
     return int(round(time() * 1000))
+
+def recursive_tuples(arr):
+    try:
+        return tuple(recursive_tuples(i) for i in arr)
+    except TypeError:
+        return arr
 
 #======================================================================
 
@@ -95,22 +104,26 @@ class Globals(object):
         #if self.DBG_DB: print self.db.db
 
     def load_db(self):
-        self.db = pickledb.load(Globals.PATH_CONFIG, Globals.AUTO_SYNC_WITH_DISK)
+        with self.dbLock:
+            self.db = pickledb.load(Globals.PATH_CONFIG, Globals.AUTO_SYNC_WITH_DISK)
         if Globals.DBG_DB: logging.info("db: load_db ({} items loaded)".format(len(self.db.db)))
 
     def load_defaults(self):
-        self.db = pickledb.load(Globals.PATH_DEFAULTS, Globals.AUTO_SYNC_WITH_DISK)
+        with self.dbLock:
+            self.db = pickledb.load(Globals.PATH_DEFAULTS, Globals.AUTO_SYNC_WITH_DISK)
         if Globals.DBG_DB: logging.info("db: load_defaults ({} items loaded)".format(len(self.db.db)))
 
     def save_db(self):
-        self.db.dump()
+        with self.dbLock:
+            self.db.dump()
         if Globals.DBG_DB: logging.info("db: save_db ({} items saved)".format(len(self.db.db)))
 
     def save_defaults(self):
         if Globals.DBG_DB: logging.info("db: save_defaults ...")
-        db_defaults = pickledb.load(Globals.PATH_DEFAULTS, False)
-        db_defaults.db = self.db.db
-        db_defaults.dump()
+        with self.dbLock:
+            db_defaults = pickledb.load(Globals.PATH_DEFAULTS, False)
+            db_defaults.db = self.db.db
+            db_defaults.dump()
 
     def gen_defaults(self):
         """
@@ -121,7 +134,7 @@ class Globals(object):
             red_hue max/min
             color_sat max/min
             color_val max/min
-            hsv_thresh
+            connector_gap
             kernel_k
             dot_size max/min (%)
             rectangle_area_ratio max/min (%)
@@ -132,22 +145,27 @@ class Globals(object):
         #self.db.set("hello", "world")
         #self.db.set("key", "value")
         #self.db.set("text", "sample text here")
-        self.db.deldb()
+        with self.dbLock:
+            self.db.deldb()
 
-        # min, max, v1, v2, range_type
-        #
-        self.db.set("bounds_x", [True, 0,100, 0,100])
-        self.db.set("bounds_y", [True, 0,100, 0,100])
-        self.db.set("black_sat", ["min", 0,255, 30])
-        self.db.set("black_val", ["min", 0,255, 30])
-        self.db.set("green_hue", [True, 0,180, 82,94])
-        self.db.set("red_hue", [True, 0,180, 10,170])
-        self.db.set("color_sat", ["max", 0,255, 60])
-        self.db.set("color_val", ["max", 0,255, 80])
-        self.db.set("hsv_thresh", ["min", 0,255, 80])
-        self.db.set("kernel_k", ["min", 0,25, 3])
-        self.db.set("dot_size", [True, 0,255, 20,100])
-        self.db.set("area_ratio", ["max", 1,100, 80])
+            # min, max, v1, v2, range_type
+            #
+            self.db.set("bounds_x", [True, 0,100, 0,100])
+            self.db.set("bounds_y", [True, 0,100, 0,100])
+            self.db.set("black_sat", ["min", 0,255, 30])
+            self.db.set("black_val", ["min", 0,255, 30])
+            self.db.set("green_hue", [True, 0,180, 82,94])
+            self.db.set("red_hue", [True, 0,180, 10,170])
+            self.db.set("color_sat", ["max", 0,255, 60])
+            self.db.set("color_val", ["max", 0,255, 80])
+            self.db.set("connector_gap", ["min", 3,100, 20])
+            self.db.set("kernel_k", ["min", 3,25, 3])
+            self.db.set("dot_size", [True, 5,255, 20,100])
+            self.db.set("area_ratio", ["max", 1,100, 80])
+
+            print "regenerating db:"
+            print self.db.db
+
         if Globals.DBG_DB: logging.info("db: gen_defaults ({} items created)".format(len(self.db.db)))
 
 G = Globals()
@@ -450,7 +468,7 @@ class Webcam(object):
     AUTO_CONNECT = True
     FORCE_RESIZE = True
     RESIZE_SIZE = 480
-    CAMID = -1
+    CAMID = 0
     JPEG_COMPRESSION = 50
 
     resolutions = [480, 720, 1080]
@@ -630,6 +648,7 @@ class Webcam(object):
             if self.stopEvent.isSet(): break
 
     def cv_process(self):
+        HSV_THRESH = 80
         #
         #TODO cv processing
         #
@@ -717,14 +736,15 @@ class Webcam(object):
         vmask[vmask < db.color_val] = 0
         vmask[vmask > db.color_val] = 255
         dst= cv2.bitwise_and(dst, vmask)
-        with G.frameSetLock:
-            self.frameSet[2] = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
-        ret,thresh = cv2.threshold(dst,db.hsv_thresh,255,0)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k),int(db.kernel_k)))
+        ret,thresh = cv2.threshold(dst,HSV_THRESH,255,0)
+        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(int(db.kernel_k),int(db.kernel_k)))
         kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
+        with G.frameSetLock:
+            self.frameSet[2] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+
         thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
         f2 = cv2.bitwise_and(f,thresh3) #filtered image
         with G.frameSetLock:
@@ -740,14 +760,14 @@ class Webcam(object):
         vmask[vmask < db.color_val] = 0
         vmask[vmask > db.color_val] = 255
         dst= cv2.bitwise_and(dst, vmask)
-        with G.frameSetLock:
-            self.frameSet[5] = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
-        ret,thresh = cv2.threshold(dst,db.hsv_thresh,255,0)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k),int(db.kernel_k)))
+        ret,thresh = cv2.threshold(dst,HSV_THRESH,255,0)
+        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(int(db.kernel_k),int(db.kernel_k)))
         kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
+        with G.frameSetLock:
+            self.frameSet[5] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
 
         thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
         f2 = cv2.bitwise_and(f,thresh3) #filtered image
@@ -938,6 +958,8 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         self.id = SockJSHandler.ID
         self.state = dict()
         self.state["frame_id"] = 0
+        self.state["rpc_lock"] = RLock()
+        self.state["rpc_queue"] = []
         #self.state["message"] = ""
         if G.DBG_SOCKET: logging.debug("SockJSHandler %d init" % self.id)
 
@@ -946,6 +968,13 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
             self.on_periodic, SockJSHandler.BROADCAST_PERIOD, WS.io_loop
         )
         self.broadcast_timer.start()
+
+    @staticmethod
+    def rpc_queue_add(name, args=[]):
+        #print msg
+        for c in SockJSHandler.sock_clients:
+            with c.state["rpc_lock"]:
+                c.state["rpc_queue"] += [timestamp(False)+"\t"+str(name)+"\t"+str(args)]
 
     def on_open(self, info):
         if G.DBG_SOCKET: logging.debug("SockJSHandler %d open" % self.id)
@@ -984,6 +1013,10 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
 
         encoded = base64.b64encode(JpegData)
 
+        with self.state["rpc_lock"]:
+            rpc_queue = list(self.state["rpc_queue"])
+            self.state["rpc_queue"] = []
+
         sendData = {
             "type": "periodic",
             "data": {
@@ -997,6 +1030,7 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
                     "frame_shape": "%d x %d (raw) / %d x %d (processed)" % (
                         W.frameRawW, W.frameRawH, rgb.shape[1], rgb.shape[0])
             },
+            "rpc" : rpc_queue,
             "frame": encoded,
             "db": db,
             "bmd": bmd,
@@ -1265,7 +1299,7 @@ class JSONConfigHandler(tornado.web.RequestHandler):
             dbstr = json.dumps(G.db.db)
         self.write(dbstr)
         logging.debug("Serving keystore as javascript header")
-        #logging.debug(dbstr)
+        logging.debug(dbstr)
         self.write(';')
 
 class RPCHandler(JSONRPCHandler):
@@ -1273,17 +1307,20 @@ class RPCHandler(JSONRPCHandler):
     def helloworld(self, *args):
         msg = "Hello world!"
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add("helloworld", args)
         return msg
 
     def echo(self, s):
         msg = s
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def shutdown(self):
         WS.stop()
         msg = 'Server shutdown at '+str(datetime.datetime.now())
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def save_image(self):
@@ -1293,6 +1330,7 @@ class RPCHandler(JSONRPCHandler):
             cv2.imwrite(fname, W.frameRaw)
         msg = "Image saved: "+fname
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def save_state(self):
@@ -1317,6 +1355,7 @@ class RPCHandler(JSONRPCHandler):
         f.close()
         msg = "State saved: "+dname
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def get_config(self):
@@ -1324,6 +1363,7 @@ class RPCHandler(JSONRPCHandler):
             db = G.db.db.copy()
         msg = json.dumps(db)
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def set_config(self, k, val):
@@ -1331,6 +1371,7 @@ class RPCHandler(JSONRPCHandler):
             G.db.set(k, val)
         msg = "Key %s set to %s" % (str(k), str(val))
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def db_load(self):
@@ -1338,6 +1379,7 @@ class RPCHandler(JSONRPCHandler):
             G.load_db()
         msg = "Keystore database config.db reloaded"
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def db_save(self):
@@ -1345,6 +1387,7 @@ class RPCHandler(JSONRPCHandler):
             G.save_db()
         msg = "Keystore database config.db saved"
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def db_defaults(self):
@@ -1352,6 +1395,7 @@ class RPCHandler(JSONRPCHandler):
             G.gen_defaults()
         msg = "Keystore database regenerated"
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 
     def cycle_webcam(self):
@@ -1375,18 +1419,18 @@ class RPCHandler(JSONRPCHandler):
             camId = W.cam_id
         if (W.cam is None) or (not ret):
             msg = "Failed to find a video source"
-            if G.DBG_RPC: logging.info("RPC: "+msg)
-            return msg
         else:
             msg = 'Switched to next available video source: '+str(camId)
-            if G.DBG_RPC: logging.info("RPC: "+msg)
-            return msg
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
+        return msg
 
     def disconnect_webcam(self):
         with G.camLock:
             W.cam = None
         msg = 'Disconnected video source'
         if G.DBG_RPC: logging.info("RPC: "+msg)
+        SockJSHandler.rpc_queue_add(msg)
         return msg
 """
     def add(self, x, y):

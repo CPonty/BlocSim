@@ -39,8 +39,10 @@ blocsim_vars = {
 	frame_reload_delay: 1, //20
 	time_last_frame: time_ms(),
 	debug_sockjs: false,
-	max_resolution: 480,
-	max_fps: 5
+	max_resolution: 720,
+	max_fps: 5,
+	stream: true,
+	show_rpc: true
 };
 
  var sliderNames = Object.keys(blocsim_calib);
@@ -336,17 +338,25 @@ $(function() {
 
 	$('#db-load:button').click(function() {
 		//alert('webcam-button-eject');
-		rpc_call("db_load");
+		//$('#server-sidebar-eject:checkbox').prop('checked', true);
+		//sockjs_disconnect();
+		blocsim_vars.stream = false;
+		window.setTimeout(function(){rpc_call("db_load");}, 100);
 	});
 
 	$('#db-save:button').click(function() {
 		//alert('webcam-button-eject');
-		rpc_call("db_save");
+		//$('#server-sidebar-eject:checkbox').prop('checked', true);
+		//sockjs_disconnect();
+		window.setTimeout(function(){rpc_call("db_save");}, 100);
 	});
 
 	$('#db-defaults:button').click(function() {
 		//alert('webcam-button-eject');
-		rpc_call("db_defaults");
+		//$('#server-sidebar-eject:checkbox').prop('checked', true);
+		//sockjs_disconnect();
+		blocsim_vars.stream = false;
+		window.setTimeout(function(){rpc_call("db_defaults");}, 100);
 	});
 
 	$('#webcam-sidebar-eject:button').click(function() {
@@ -390,6 +400,28 @@ $(function() {
 		}
 	});
 
+	$('#rpc-tab-check-pause:checkbox').change(function() {
+		//alert('server-checked-eject');
+		//.is(':checked')
+		blocsim_vars.show_rpc = !(this.checked);
+	});
+
+	$('#frame-tab-check-expand:checkbox').change(function() {
+		//alert('server-checked-eject');
+		//.is(':checked')
+		if (this.checked) {
+			$("#webcam-tab-frame-supercontainer").css("width", "100%");
+		} else {
+			$("#webcam-tab-frame-supercontainer").css("width", "auto");
+		}
+	});
+
+	$('#rpc-tab-clear-button:button').click(function() {
+		//alert('server-checked-eject');
+		//.is(':checked')
+		$("#rpc-tab-panel").html("(Cleared)\r\n");
+	});
+
 	$('#webcam-sidebar-cycle:button').click(function() {
 		//alert('webcam-button-cycle');
 		rpc_call("cycle_webcam");
@@ -409,7 +441,7 @@ function blocsim_event_loop() {
 	//console.log("sock", sock);
 	//
 	//console.log('blocsim_event_loop');
-	if (sock == null) return;
+	if (sock == null || !blocsim_vars.stream) return;
 	calib = {};
 	for (var i=0; i<sliderNames.length; i++) {
 		var slider = $( "#sliderrange-"+i.toString() );
@@ -495,11 +527,17 @@ sockjs_connect = function() {
 		    allMinusBigData.db = "{ ... }";
 		 	allMinusBigData.bmd = "{ ... }";
 		 	allMinusBigData.sim = "{ ... }";
+		 	allMinusBigData.rpc = "[ ... ]";
 		    allMinusBigData.frame = "data:image/jpg;base64, ...";
 		    var allText = JSON.stringify(allMinusBigData, undefined, 4);
 		    var dbText = JSON.stringify(received.db, undefined, 4);
 		    var bmdText = JSON.stringify(received.bmd, undefined, 4);
 		    var simText = JSON.stringify(received.sim, undefined, 4);
+		    if (blocsim_vars.show_rpc) {
+			    for (var i=0; i<received.rpc.length; i++) {
+					$( "#rpc-tab-panel" )[0].innerHTML += received.rpc[i]+"\r\n";
+		    	}
+			}
 		    $( "#test-tab-sockjs-text" ).html(syntaxHighlight(allText));
 		    $( "#test-tab-db-text" ).html(syntaxHighlight(dbText));
 		    if (blocsim_vars.bmd.mode == 1) {

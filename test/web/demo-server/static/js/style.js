@@ -181,4 +181,10 @@ $(function() {
   $( "#callback-sidebar-text" ).bind("DOMSubtreeModified",function(){
     $( this ).effect( "highlight", {color: '#b8ec79'}, 1000); 
   });
+
+  //var rpcText="";
+  //rpcText+="from jsonrpclib import Server<br/>";
+  //rpcText+="server = Server('http://localhost:8080/rpc')<br/>";
+  //rpcText+="print server.get_config()<br/>";
+  //$( "#rpc-tab-hint-text" ).html(syntaxHighlight(JSON.stringify(rpcText, undefined, 4)));
 });
