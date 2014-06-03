@@ -39,7 +39,8 @@ blocsim_vars = {
 	frame_reload_delay: 1, //20
 	time_last_frame: time_ms(),
 	debug_sockjs: false,
-	max_resolution: 1
+	max_resolution: 480,
+	max_fps: 5
 };
 
  var sliderNames = Object.keys(blocsim_calib);
@@ -142,10 +143,10 @@ blocsim_rpc.handle.echo = rpc_call_alert_handler;
 blocsim_rpc.handle.shutdown = function(response) {
         rpc_call_alert_handler(response);
         if (response.result) {
-		    $( "#server-indicator" ).css("background-color", "#cc0000");
-		    $( "#cv-indicator" ).css("background-color", "#cc0000");
-		    $( "#bmd-indicator" ).css("background-color", "#cc0000");
-		    $( "#webcam-indicator" ).css("background-color", "#cc0000");
+		    indicator_update( "#server-indicator", "#cc0000");
+		    indicator_update( "#cv-indicator", "#cc0000");
+		    indicator_update( "#bmd-indicator", "#cc0000");
+		    indicator_update( "#webcam-indicator", "#cc0000");
 		    blocsim_vars.server_running = false;
         }
 };
@@ -165,6 +166,7 @@ blocsim_rpc.handle.db_save = rpc_call_alert_handler;
 blocsim_rpc.handle.cycle_webcam = rpc_call_alert_handler;
 blocsim_rpc.handle.disconnect_webcam = rpc_call_alert_handler;
 blocsim_rpc.handle.save_image = rpc_call_alert_handler;
+blocsim_rpc.handle.save_state = rpc_call_alert_handler;
 
 /*
 blocsim_rpc.handle.helloworld = function(response) {
@@ -233,6 +235,22 @@ function shutdown() {
 }
 */
 
+function rgb2hex(rgb) {
+    rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+))?\)$/);
+    function hex(x) {
+        return ("0" + parseInt(x).toString(16)).slice(-2);
+    }
+    return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
+}
+
+function indicator_update( JQueryId, color ) {
+	//console.log($( JQueryId ).css("background-color"));
+	if ( rgb2hex( $( JQueryId ).css("background-color") ) != color ) {
+		$( JQueryId ).css("background-color", color);
+		$( JQueryId ).effect( "pulsate", {times: 3}, 300); 
+	}
+}
+
 function frame_reload() {
     //$( "#frame" ).attr('src', 
     //	"frame.jpg?id="+$( "#webcam-tab-frame-name" )[0].selectedIndex.toString()+"#"+time_ms()
@@ -249,7 +267,7 @@ $(function() {
 
     $( "#frame" ).load( function() {
     	blocsim_vars.server_running = true;
-	    $( "#server-indicator" ).css("background-color", "#00cc00");
+	    indicator_update( "#server-indicator", "#00cc00");
 	    blocsim_vars.time_last_frame = time_ms();
     	frame_loaded();
     });
@@ -289,6 +307,11 @@ $(function() {
 		blocsim_vars.max_resolution = parseInt($(this).val());
 	});
 
+	$("input[name=cv-sidebar-radio3]:radio").change(function () {
+		//alert('cv-radio-res '+$(this).val());
+		blocsim_vars.max_fps = parseInt($(this).val());
+	});
+
 	$("input[name=bmd-sidebar-radio1]:radio").change(function () {
 		//alert('bmd-radio-connection '+$(this).val());
 		blocsim_vars.bmd.mode = parseInt($(this).val());
@@ -300,6 +323,11 @@ $(function() {
 		alert('webcam-checked-eject');
 	}); 
 	*/
+
+	$('#state-save:button').click(function() {
+		//alert('webcam-button-cycle');
+		rpc_call("save_state");
+	}); 
 
 	$('#frame-save:button').click(function() {
 		//alert('webcam-button-eject');
@@ -325,6 +353,17 @@ $(function() {
 		//alert('webcam-button-eject');
 		rpc_call("disconnect_webcam");
 	});
+
+	$('#webcam-tab-check-fromfile').click(function() {
+		//alert('webcam-button-eject');
+		if ($("#webcam-tab-check-fromfile")[0].checked) {
+			$( "#callback-sidebar-text" ).html("Video input: ./frame.jpg");
+		} else {
+			$( "#callback-sidebar-text" ).html("Video input: Webcam");
+		}
+	});
+
+	
 
 	/*
 	$('#frame').click(function() {
@@ -374,13 +413,27 @@ function blocsim_event_loop() {
 	calib = {};
 	for (var i=0; i<sliderNames.length; i++) {
 		var slider = $( "#sliderrange-"+i.toString() );
-		calib[sliderNames[i]] = [
-			slider.slider("option", "min"),
-			slider.slider("option", "max"),
-			slider.slider("option", "values")[0],
-			slider.slider("option", "values")[1],
-			slider.slider("option","range")
-		];
+
+		if (typeof slider.slider("option","range") == "boolean") {
+			calib[sliderNames[i]] = [
+				slider.slider("option","range"),
+				slider.slider("option", "min"),
+				slider.slider("option", "max"),
+				slider.slider("option", "values")[0],
+				slider.slider("option", "values")[1]
+			];
+		} else if (typeof slider.slider("option","range")
+			)  {
+			calib[sliderNames[i]] = [
+				slider.slider("option","range"),
+				slider.slider("option", "min"),
+				slider.slider("option", "max"),
+				slider.slider("option", "value")
+			];
+		} else {
+			console.error("Slider range type invalid");
+			continue;
+		}
    	}
    	//console.log(calib);
 	var msg = {
@@ -390,6 +443,7 @@ function blocsim_event_loop() {
         "bmd_on" : blocsim_vars.bmd.mode < 3 && $('#bmd-sidebar-mqtt:checkbox')[0].checked,
         "sim_on" : blocsim_vars.bmd.mode < 3 && $('#bmd-sidebar-simulation:checkbox')[0].checked,
         "frame_res" : blocsim_vars.max_resolution, 
+        "frame_fps" : blocsim_vars.max_fps,
         "calib" : calib,
         "input_from_file": $("#webcam-tab-check-fromfile")[0].checked
     }
@@ -406,7 +460,7 @@ function blocsim_tick_loop() {
 
 	if ((sock==null) && (blocsim_vars.webcam.mode!=1 || (time_ms() - blocsim_vars.time_last_frame) > 1500)) {
 		blocsim_vars.server_running = false;
-		$( "#server-indicator" ).css("background-color", "#f6931f");
+		indicator_update( "#server-indicator", "#f6931f");
 	}
 }
 
@@ -423,12 +477,12 @@ sockjs_connect = function() {
 	sock.onopen = function() {
 		console.log('websocket open');
 		blocsim_vars.server_running = true;
-	    $( "#server-indicator" ).css("background-color", "#00cc00");
+	    indicator_update( "#server-indicator", "#00cc00");
 	    //$( "#cv-indicator" ).css("background-color", "#f6931f");
 	    //$( "#bmd-indicator" ).css("background-color", "#f6931f");
-	    $( "#cv-indicator" ).css("background-color", "#00cc00");
-	    $( "#bmd-indicator" ).css("background-color", "#00cc00");
-	    $( "#webcam-indicator" ).css("background-color", "#f6931f");
+	    indicator_update( "#cv-indicator", "#00cc00");
+	    indicator_update( "#bmd-indicator", "#00cc00");
+	    indicator_update( "#webcam-indicator", "#f6931f");
 	    //load_server_config();
 	};
 	sock.onmessage = function(e) {
@@ -438,8 +492,10 @@ sockjs_connect = function() {
 
 	    if (received["type"] == "periodic") {
 		    var allMinusBigData = jQuery.extend(true, {}, received);
-		    allMinusBigData.db = "...";
-		    allMinusBigData.frame = "...";
+		    allMinusBigData.db = "{ ... }";
+		 	allMinusBigData.bmd = "{ ... }";
+		 	allMinusBigData.sim = "{ ... }";
+		    allMinusBigData.frame = "data:image/jpg;base64, ...";
 		    var allText = JSON.stringify(allMinusBigData, undefined, 4);
 		    var dbText = JSON.stringify(received.db, undefined, 4);
 		    var bmdText = JSON.stringify(received.bmd, undefined, 4);
@@ -448,18 +504,18 @@ sockjs_connect = function() {
 		    $( "#test-tab-db-text" ).html(syntaxHighlight(dbText));
 		    if (blocsim_vars.bmd.mode == 1) {
 		    	if ($('#bmd-sidebar-simulation:checkbox')[0].checked) {
-		    		$( "#simTextBmd-tab-panel" ).html(syntaxHighlight(bmdText));
 		    		$( "#simTextLogic-tab-panel" ).html(syntaxHighlight(simText));
 		    	}
 		    	if ($('#bmd-sidebar-mqtt:checkbox')[0].checked) {
 		    		$( "#bmdTextBmd-tab-panel" ).html(syntaxHighlight(bmdText));
+		    		$( "#simTextBmd-tab-panel" ).html(syntaxHighlight(bmdText));
 		    	}
 		    }
 		    $( "#client-id-span" ).html(' # '+received.data.client_id);
 		    if (received.data.webcam_connected) {
-		    	$( "#webcam-indicator" ).css("background-color", "#00cc00");
+		    	indicator_update( "#webcam-indicator", "#00cc00");
 		    } else {
-		    	$( "#webcam-indicator" ).css("background-color", "#cc0000");
+		    	indicator_update( "#webcam-indicator", "#cc0000");
 		    }
 		    if ("frame" in received) {
 		    	if ( blocsim_vars.webcam.mode == 1 && blocsim_vars.cv.mode == 1 ) {
@@ -479,10 +535,10 @@ sockjs_connect = function() {
 	    if (blocsim_vars.debug_sockjs) console.log('websocket close');
 	    sock = null;
 	    if (blocsim_vars.server_running) {
-		    $( "#server-indicator" ).css("background-color", "#f6931f");
-		    $( "#cv-indicator" ).css("background-color", "#f6931f");
-		    $( "#bmd-indicator" ).css("background-color", "#f6931f");
-		    $( "#webcam-indicator" ).css("background-color", "#f6931f");
+		    indicator_update( "#server-indicator" , "#f6931f");
+		    indicator_update( "#cv-indicator", "#f6931f");
+		    indicator_update( "#bmd-indicator", "#f6931f");
+		    indicator_update( "#webcam-indicator", "#f6931f");
 		    $( "#client-id-span" ).html("");
 		}
 	};

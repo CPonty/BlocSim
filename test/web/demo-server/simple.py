@@ -136,18 +136,18 @@ class Globals(object):
 
         # min, max, v1, v2, range_type
         #
-        self.db.set("bounds_x", [0,100, 0,100, True])
-        self.db.set("bounds_y", [0,100, 0,100, True])
-        self.db.set("black_sat", [0,255, 0,30, "min"])
-        self.db.set("black_val", [0,255, 0,30, "min"])
-        self.db.set("green_hue", [0,180, 50,70, True])
-        self.db.set("red_hue", [0,180, 0,20, True])
-        self.db.set("color_sat", [0,255, 80,255, "max"])
-        self.db.set("color_val", [0,255, 80,255, "max"])
-        self.db.set("hsv_thresh", [0,255, 0,80, "min"])
-        self.db.set("kernel_k", [0,50, 0,10, "min"])
-        self.db.set("dot_size", [0,255, 30,100, True])
-        self.db.set("area_ratio", [1,100, 90,100, "max"])
+        self.db.set("bounds_x", [True, 0,100, 0,100])
+        self.db.set("bounds_y", [True, 0,100, 0,100])
+        self.db.set("black_sat", ["min", 0,255, 30])
+        self.db.set("black_val", ["min", 0,255, 30])
+        self.db.set("green_hue", [True, 0,180, 82,94])
+        self.db.set("red_hue", [True, 0,180, 10,170])
+        self.db.set("color_sat", ["max", 0,255, 60])
+        self.db.set("color_val", ["max", 0,255, 80])
+        self.db.set("hsv_thresh", ["min", 0,255, 80])
+        self.db.set("kernel_k", ["min", 0,25, 3])
+        self.db.set("dot_size", [True, 0,255, 20,100])
+        self.db.set("area_ratio", ["max", 1,100, 80])
         if Globals.DBG_DB: logging.info("db: gen_defaults ({} items created)".format(len(self.db.db)))
 
 G = Globals()
@@ -451,11 +451,13 @@ class Webcam(object):
     FORCE_RESIZE = True
     RESIZE_SIZE = 480
     CAMID = -1
+    JPEG_COMPRESSION = 50
 
     resolutions = [480, 720, 1080]
 
     def __init__(self):
         self.processing = False
+        self.jpeg_compression = Webcam.JPEG_COMPRESSION
 
         self.timerCounter = 0
         self.fps = 0.0
@@ -566,7 +568,7 @@ class Webcam(object):
                     else:
                         self.ret, f = self.cam.read()
             if self.stopEvent.isSet(): break
-            if (self.ret == False) and (self.cam):
+            if (self.ret is False) and self.cam:
                 self.cam = None
                 logging.warning("CV2 camera disconnect")
                 #TODO
@@ -650,7 +652,13 @@ class Webcam(object):
         db = type('', (), {})()
         for k,v in dbcopy.iteritems():
             #db.k = v[2:4]
-            setattr(db, k, v[2:4])
+            #print k, v[0], type(v[0])
+            if type(v[0]) is bool:
+                setattr(db, k, v[3:5])
+            elif type(v[0]) is str or type(v[0]) is unicode:
+                setattr(db, k, v[3])
+            else:
+                raise TypeError(str(type(v[0]))+" - Unexpected type for range in keystore")
 
         with G.frameSetLock:
             self.frameSet[0] = self.frameRaw.copy()
@@ -666,14 +674,20 @@ class Webcam(object):
         roiHistBlk = cv2.calcHist(black, [1,2], None, [256,256], [0,256,0,256])
         roiHistBlk[:,:] = 0
         # colors use sat, hue
-        cv2.rectangle(roiHistRed,(db.color_sat[0],0),(db.color_sat[1],db.red_hue[0]),255,-1)
-        cv2.rectangle(roiHistRed,(db.color_sat[0],db.red_hue[1]),(db.color_sat[1],180),255,-1)
-        cv2.rectangle(roiHistGrn,(db.color_sat[0],db.green_hue[0]),(db.color_sat[1],db.green_hue[1]),255,-1)
+        cv2.rectangle(roiHistRed,(db.color_sat,0),(255,db.red_hue[0]),255,-1)
+        cv2.rectangle(roiHistRed,(db.color_sat,db.red_hue[1]),(255,180),255,-1)
+        cv2.rectangle(roiHistGrn,(db.color_sat,db.green_hue[0]),(255,db.green_hue[1]),255,-1)
         # black uses val, sat
-        cv2.rectangle(roiHistBlk,(db.black_val[0],db.black_sat[0]),(db.black_val[1],db.black_sat[1]),255,-1)
+        cv2.rectangle(roiHistBlk,(0,0),(db.black_val,db.black_sat),255,-1)
         #cv2.rectangle(roiHist2,(140,174),(250,180),255,-1)
         #cv2.rectangle(roiHist2,(140,0),(250,3),255,-1)
-
+        """
+        print db.bounds_x, db.bounds_y, f.shape, w,h
+        print int(db.bounds_y[0]/100.0*h), int(db.bounds_y[1]/100.0*h)
+        print int(db.bounds_x[0]/100.0*w), int(db.bounds_x[1]/100.0*w)
+        print db.bounds_x
+        print db.bounds_y
+        """
         f = f[
             int(db.bounds_y[0]/100.0*h) : int(db.bounds_y[1]/100.0*h),
             int(db.bounds_x[0]/100.0*w) : int(db.bounds_x[1]/100.0*w)
@@ -682,7 +696,6 @@ class Webcam(object):
         #cv2.rectangle(f,(0,0),(w,int(db.bounds_y[0]/100.0*h)),(255,255,255),-1)
         #cv2.rectangle(f,(0,int((db.bounds_y[1])/100.0*h)),(w,h),(255,255,255),-1)
         #cv2.rectangle(f,(int((db.bounds_x[1])/100.0*w),0),(w,h),(255,255,255),-1)
-        #cv2.rectangle(f,(0,0),(int(db.bounds_x[0]/100.0*w),h),(255,255,255),-1)
 
         for i in [1,4,7,8,11,12,13,14,15,16]:
             with G.frameSetLock:
@@ -701,14 +714,14 @@ class Webcam(object):
         disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
         cv2.filter2D(dst,-1,disc,dst)
         vmask = val.copy()
-        vmask[vmask < db.color_val[0]] = 0
-        vmask[vmask > db.color_val[0]] = 255
+        vmask[vmask < db.color_val] = 0
+        vmask[vmask > db.color_val] = 255
         dst= cv2.bitwise_and(dst, vmask)
         with G.frameSetLock:
             self.frameSet[2] = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
-        ret,thresh = cv2.threshold(dst,db.hsv_thresh[1],255,0)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]),int(db.kernel_k[1])))
-        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]*1.5),int(db.kernel_k[1]*1.5)))
+        ret,thresh = cv2.threshold(dst,db.hsv_thresh,255,0)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k),int(db.kernel_k)))
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
@@ -724,14 +737,14 @@ class Webcam(object):
         disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
         cv2.filter2D(dst,-1,disc,dst)
         vmask = val.copy()
-        vmask[vmask < db.color_val[0]] = 0
-        vmask[vmask > db.color_val[0]] = 255
+        vmask[vmask < db.color_val] = 0
+        vmask[vmask > db.color_val] = 255
         dst= cv2.bitwise_and(dst, vmask)
         with G.frameSetLock:
             self.frameSet[5] = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
-        ret,thresh = cv2.threshold(dst,db.hsv_thresh[1],255,0)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]),int(db.kernel_k[1])))
-        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k[1]*1.5),int(db.kernel_k[1]*1.5)))
+        ret,thresh = cv2.threshold(dst,db.hsv_thresh,255,0)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k),int(db.kernel_k)))
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
@@ -959,7 +972,7 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
             #rgb = W.frameRaw.copy()
 
         rgb = W.frame_from_id(self.state["frame_id"])
-        ret, JpegData = cv2.imencode(".jpeg",rgb, (int(cv2.IMWRITE_JPEG_QUALITY),50))
+        ret, JpegData = cv2.imencode(".jpeg",rgb, (int(cv2.IMWRITE_JPEG_QUALITY), W.jpeg_compression))
         JpegData = np.ndarray.tostring(JpegData, np.uint8)
 
         #rgb = C.resize_fixed(rgb,320,240)
@@ -980,7 +993,7 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
                     "fps_webcam": "%.2f" % W.fps,
                     "fps_processing": "%.2f" % W.fps2,
                     "frame_counter": W.frameN,
-                    "frame_size": "%.2f KB" % (len(JpegData)/1024.),
+                    "frame_size": "%.2f KB (%d%% compression)" % (len(JpegData)/1024., W.jpeg_compression),
                     "frame_shape": "%d x %d (raw) / %d x %d (processed)" % (
                         W.frameRawW, W.frameRawH, rgb.shape[1], rgb.shape[0])
             },
@@ -1011,15 +1024,16 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         #        print "message %s: rejected key %s" % (message, key)
         #reply = json.dumps(broadcast)
         self.state["frame_id"] = data["frame_id"]
-        res = data["frame_res"]
-        if res==1:
-            W.resizeSize = 480
-        elif res==2:
-            W.resizeSize = 720
-        elif res==3:
-            W.resizeSize = 1080
-        else:
-            raise TypeError("Frame resolution invalid")
+        try:
+            res = int(data["frame_res"])
+            W.resizeSize = res
+        except:
+            logging.error("on_message: Frame resolution is not an integer")
+        try:
+            res = int(data["frame_fps"])
+            W.fpsLimit = res
+        except:
+            logging.error("on_message: FPS is not an integer")
         W.do_process_webcam = data["webcam_on"]
         W.do_process_cv= data["cv_on"]
         W.do_process_bmd= data["bmd_on"]
@@ -1250,8 +1264,8 @@ class JSONConfigHandler(tornado.web.RequestHandler):
         with G.dbLock:
             dbstr = json.dumps(G.db.db)
         self.write(dbstr)
-        logging.debug("Sending db")
-        logging.debug(dbstr)
+        logging.debug("Serving keystore as javascript header")
+        #logging.debug(dbstr)
         self.write(';')
 
 class RPCHandler(JSONRPCHandler):
@@ -1278,6 +1292,30 @@ class RPCHandler(JSONRPCHandler):
             cv2.imwrite("static/images/frame.jpg", W.frameRaw)
             cv2.imwrite(fname, W.frameRaw)
         msg = "Image saved: "+fname
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        return msg
+
+    def save_state(self):
+        dname = "static/saves/state_"+str(timestamp_ms())
+        if not os.path.exists(dname):
+            os.makedirs(dname)
+        # save the keystore
+        f = open(os.path.join(dname, "config.db"), "wb")
+        with G.dbLock:
+            json.dump(G.db.db, f)
+        f.close()
+        # save images - raw and processed
+        with G.frameLock:
+            cv2.imwrite(os.path.join(dname, "frameRaw.jpg"), W.frameRaw)
+        with G.frameSetLock:
+            for i in W.frameSet.keys():
+                cv2.imwrite(os.path.join(dname, "frame%d.jpg" % i), W.frameSet[i])
+        # save the block diagram model
+        f = open(os.path.join(dname, "block-model.json"), "wb")
+        with G.bmdLock:
+            json.dump(W.bmd_data, f)
+        f.close()
+        msg = "State saved: "+dname
         if G.DBG_RPC: logging.info("RPC: "+msg)
         return msg
 

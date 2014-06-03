@@ -176,4 +176,9 @@ $(function() {
     return false;
   }).parent().buttonset().next().hide().menu();
   */
+
+  // Finally - animation / effects
+  $( "#callback-sidebar-text" ).bind("DOMSubtreeModified",function(){
+    $( this ).effect( "highlight", {color: '#b8ec79'}, 1000); 
+  });
 });
