@@ -469,7 +469,7 @@ class Webcam(object):
     FORCE_RESIZE = True
     RESIZE_SIZE = 480
     CAMID = 0
-    JPEG_COMPRESSION = 50
+    JPEG_COMPRESSION = 95
 
     resolutions = [480, 720, 1080]
 
@@ -649,6 +649,7 @@ class Webcam(object):
 
     def cv_process(self):
         HSV_THRESH = 80
+        frameSet = {}
         #
         #TODO cv processing
         #
@@ -679,9 +680,9 @@ class Webcam(object):
             else:
                 raise TypeError(str(type(v[0]))+" - Unexpected type for range in keystore")
 
-        with G.frameSetLock:
-            self.frameSet[0] = self.frameRaw.copy()
-        f = self.frameSet[0].copy()
+        with G.frameLock:
+            frameSet[0] = self.frameRaw.copy()
+        f = frameSet[0].copy()
         w = f.shape[1]
         h = f.shape[0]
 
@@ -711,14 +712,15 @@ class Webcam(object):
             int(db.bounds_y[0]/100.0*h) : int(db.bounds_y[1]/100.0*h),
             int(db.bounds_x[0]/100.0*w) : int(db.bounds_x[1]/100.0*w)
         ]
+        w = f.shape[1]
+        h = f.shape[0]
         #cv2.rectangle(f,(0,0),(int(db.bounds_x[0]/100.0*w),h),(255,255,255),-1)
         #cv2.rectangle(f,(0,0),(w,int(db.bounds_y[0]/100.0*h)),(255,255,255),-1)
         #cv2.rectangle(f,(0,int((db.bounds_y[1])/100.0*h)),(w,h),(255,255,255),-1)
         #cv2.rectangle(f,(int((db.bounds_x[1])/100.0*w),0),(w,h),(255,255,255),-1)
 
         for i in [1,4,7,8,11,12,13,14,15,16]:
-            with G.frameSetLock:
-                self.frameSet[i] = f.copy()
+            frameSet[i] = f.copy()
 
         #bw_red =         thresh = cv2.inRange(hsv,np.array((h0,s0,v0)), np.array((h0,s1,v1)))
 
@@ -737,19 +739,71 @@ class Webcam(object):
         vmask[vmask > db.color_val] = 255
         dst= cv2.bitwise_and(dst, vmask)
         ret,thresh = cv2.threshold(dst,HSV_THRESH,255,0)
-        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(int(db.kernel_k),int(db.kernel_k)))
-        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
+        kernel = cv2.getStructuringElement(cv2.MORPH_ERODE,(int(db.kernel_k),int(db.kernel_k)))
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_ERODE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
-        cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
+        #cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
-        with G.frameSetLock:
-            self.frameSet[2] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+        frameSet[2] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
 
         thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
         f2 = cv2.bitwise_and(f,thresh3) #filtered image
-        with G.frameSetLock:
-            self.frameSet[3] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
+        frameSet[3] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
 
+        # get hollow contours, discard everything too small or too big
+        # get their min bounding rects, ellipses, areas, centres
+        # discard everything with an area ratio too low
+        #### get the median size (sort a list of areas)(round down) & discard anything more than 50% off the median one
+
+        # Find contours with cv2.RETR_CCOMP
+        thresh2 = thresh.copy()
+        contours,hierarchy = cv2.findContours(thresh2,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+
+        # find internal contours & accept their parents
+        blocks = []
+        for i,cnt_inner in enumerate(contours):
+            # Check if it is an external contour and its area is more than 100
+            #if hierarchy[0,i,3] == -1 and cv2.contourArea(cnt)>100:
+            #print "hierachy", hierarchy[0,i,3]
+            area = cv2.contourArea(cnt_inner)
+            parent = hierarchy[0,i,3]
+            parentArea = area
+            if parent != -1:
+                cnt = contours[parent]
+                parentArea = cv2.contourArea(cnt)
+                rect = cv2.minAreaRect(cnt)
+                rect = np.int0(cv2.cv.BoxPoints(rect))
+                rectArea = cv2.contourArea(rect)
+            if (parent != -1
+                and cv2.contourArea(cnt_inner)>int((w*0.05)*(h*0.05))
+                and area > parentArea*0.4
+                and parentArea > rectArea*0.8
+            ):
+                xx,yy,ww,hh = cv2.boundingRect(cnt)
+                m = cv2.moments(cnt)
+                cx,cy = m['m10']/m['m00'],m['m01']/m['m00']
+                blocks += [{
+                    "cnt": cnt,
+                    "x": xx,
+                    "y": yy,
+                    "w": ww,
+                    "h": hh,
+                    "cx": cx,
+                    "cy": cy,
+                    "rect": rect,
+                    "id": len(blocks),
+                    "type": -1,
+                    "dot": -1
+                }]
+        #print "====="
+        for i,block in enumerate(blocks):
+            cv2.drawContours(frameSet[4], [block["rect"]], -1, (0,255,0), 2)
+            #cv2.rectangle(frameSet[4],(block["x"],block["y"]),(block["x"]+block["w"],block["y"]+block["h"]),(0,255,0),2)
+            cv2.circle(frameSet[4],(int(block["cx"]),int(block["cy"])),3,255,-1)
+            #cv2.circle(frameSet[7],(int(dot["x"]),int(dot["y"])),int(dot["rr"]),(0,255,0),2)
+            #cv2.circle(frameSet[7],(int(dot["cx"]),int(dot["cy"])),3,255,-1)
+
+        # =============================================================
         # green
         hsvt = cv2.cvtColor(f,cv2.COLOR_BGR2HSV)
         hue,sat,val = cv2.split(hsvt)
@@ -766,14 +820,102 @@ class Webcam(object):
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
-        with G.frameSetLock:
-            self.frameSet[5] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+        frameSet[5] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
 
         thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
         f2 = cv2.bitwise_and(f,thresh3) #filtered image
-        with G.frameSetLock:
-            self.frameSet[6] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
+        frameSet[6] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
 
+        # Find contours with cv2.RETR_CCOMP
+        thresh2 = thresh.copy()
+        contours,hierarchy = cv2.findContours(thresh2,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+
+        # find internal contours & accept their parents
+        dots = []
+        for i,cnt in enumerate(contours):
+            # Check if it is an external contour and its area is more than 100
+            #if hierarchy[0,i,3] == -1 and cv2.contourArea(cnt)>100:
+            #print "hierachy", hierarchy[0,i,3]
+            parent = hierarchy[0,i,3]
+            xx,yy,ww,hh = cv2.boundingRect(cnt)
+            if (parent == -1
+                and cv2.contourArea(cnt)>int((ww*0.02)*(hh*0.02))
+                and ww>0 and hh>0
+                and 1.0*ww/hh > (70./100) and 1.0*hh/ww < (100/70.)
+            ):
+                (xx,yy),rr = cv2.minEnclosingCircle(cnt)
+                m = cv2.moments(cnt)
+                cx,cy = m['m10']/m['m00'],m['m01']/m['m00']
+                dots += [{
+                    "cnt": cnt,
+                    "x": xx,
+                    "y": yy,
+                    "r": rr,
+                    "cx": cx,
+                    "cy": cy,
+                    "id": len(blocks),
+                    "type": -1
+                }]
+        if len(dots) > 2:
+            radii = [(d["id"], d["r"]) for d in dots]
+            radii.sort()
+            avg_r = radii[len(radii)/2][1]
+            for i,dot in enumerate(dots):
+                if dot["r"] > avg_r*2:
+                    dots.pop(i)
+
+        for i,dot in enumerate(dots):
+            cv2.circle(frameSet[7],(int(dot["x"]),int(dot["y"])),int(dot["r"]),(0,255,0),2)
+            cv2.circle(frameSet[7],(int(dot["cx"]),int(dot["cy"])),3,255,-1)
+
+        usedBlocks = []
+        usedDots = []
+        oldDotList = list(dots)
+        oldBlockList = list(blocks)
+        for i,block in enumerate(oldBlockList):
+            for j,dot in enumerate(oldDotList):
+                if cv2.pointPolygonTest(block["rect"], (dot["cx"],dot["cy"]), False) > 0:
+                    usedBlocks += [block]
+                    usedDots += [dot]
+                    block["dot"] = dot["id"]
+                    if (dot["cx"] < block["cx"]):
+                        if (dot["cy"] < block["cy"]):
+                            block["type"] = 0
+                        else:
+                            block["type"] = 3
+                    else:
+                        if (dot["cy"] < block["cy"]):
+                            block["type"] = 1
+                        else:
+                            block["type"] = 2
+                    break
+        blocks = usedBlocks
+        dots = usedDots
+        for i,block in enumerate(blocks):
+            cv2.drawContours(frameSet[8], [block["rect"]], -1, (0,255,0), 2)
+            #cv2.rectangle(frameSet[8],(block["x"],block["y"]),(block["x"]+block["w"],block["y"]+block["h"]),(0,255,0),2)
+            cv2.circle(frameSet[8],(int(block["cx"]),int(block["cy"])),3,255,-1)
+            #TODO
+        for i,dot in enumerate(dots):
+            cv2.circle(frameSet[8],(int(dot["x"]),int(dot["y"])),int(dot["r"]),(0,255,0),2)
+            cv2.circle(frameSet[8],(int(dot["cx"]),int(dot["cy"])),3,255,-1)
+        for i,block in enumerate(blocks):
+            cv2.putText(frameSet[8], "id: %s | type: %d" % (block["id"], block["type"]), (int(block["x"]),int(block["cy"])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255))
+        #print "====="
+
+        # get solid contours, discard everything too small or too big
+        # get their min bounding circles, areas, centres
+        # discard everything with an area ratio too low
+
+        # for each rectangle, loop through green centroids, add inside ones to a list
+        # build up a list of 'used' green dots, discard the old list
+        # remove the rectangles that don't have a green dot
+
+        # =============================================================
+        # black
+
+
+        # get solid contours, discard everything too small or too big
 
         """
         hsvt = cv2.cvtColor(im,cv2.COLOR_BGR2HSV)
@@ -798,13 +940,24 @@ class Webcam(object):
         img4 = cv2.bitwise_and(im,thresh3) #combined image
         """
 
+        # copy results to frame set
+        with G.frameSetLock:
+            for k,v in frameSet.iteritems():
+                self.frameSet[k] = v
         #
         #
         self.fps2_update()
         with G.bmdLock:
             self.bmd_data = {
                 "type": "blocsim",
-                "blocks": [],
+                "blocks": [{
+                    "id": block["id"],
+                    "type": block["type"],
+                    "x": int(block["cx"]),
+                    "y": int(block["cy"]),
+                    "w": int(block["w"]),
+                    "h": int(block["h"])
+                } for block in blocks],
                 "connectors": [],
                 "nodes": [],
                 "timestamp": timestamp(),

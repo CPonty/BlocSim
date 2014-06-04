@@ -283,11 +283,11 @@ Webcam
 
 
   $('html').keydown(function(e){
-    if (e.which==219 || e.which==37) { // <-- [
+    if (e.which==219 || e.which==37 || e.which==81) { // <-- [ Q
       if (select[0].selectedIndex > 0) select[0].selectedIndex -= 1;
       select.change();
     }
-    else if (e.which==221 || e.which==39) { // --> ]
+    else if (e.which==221 || e.which==39 || e.which==69) { // --> ] E
       if (select[0].selectedIndex < 16) select[0].selectedIndex += 1;
       select.change();
     }
@@ -299,11 +299,17 @@ Webcam
       select[0].selectedIndex = 0
       select.change();
     }
-    else if (e.which==68) { // D
+    else if (e.which==83) { // S
       $( "#server-sidebar-eject" ).click();
     }
     else if (e.which==87) { // W
       $( "#frame-tab-check-expand" ).click();
+    }
+    else if (e.which==65) { // A
+      $( "#sidebar-collapsebtn" ).click();
+    }
+    else if (e.which==68) { // D
+      $( "#webcam-sidebar-cycle" ).click();
     }
     /*
     if (e.which==80) { // P

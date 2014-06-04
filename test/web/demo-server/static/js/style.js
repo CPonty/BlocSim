@@ -63,7 +63,7 @@ $(function() {
   */
   $( ".accordion" ).accordion({heightStyle: "content"});
   $( ".buttonset" ).buttonset();
-  $( ".tabs" ).tabs({event: "mouseover"}).css("border", "none"); // mouseover for hover-tabs
+  $( ".tabs" ).tabs({event: "click"}).css("border", "none"); // mouseover for hover-tabs
   $( "#server-indicator" ).css("background-color", "#00cc00");
   $( "#webcam-indicator" ).css("background-color", "#f6931f");
   //console.log($(".tabs a"))
