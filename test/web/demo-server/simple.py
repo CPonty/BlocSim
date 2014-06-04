@@ -3,10 +3,10 @@
 """
     BlocSim
 """
-from flask import Flask, request
+#from flask import Flask, request
 from threading import Thread, RLock, Event, Timer
 from collections import deque
-from signal import signal, SIGINT
+#from signal import signal, SIGINT
 import sys
 import atexit
 import os
@@ -22,15 +22,17 @@ import tornado.web
 import sockjs.tornado
 import sockjs.tornado.periodic
 from tornadorpc.json import JSONRPCHandler
-from tornadorpc import private, start_server
+#from tornadorpc import private, start_server
 import logging
 from PIL import Image
 import StringIO
 import shutil
 import pickledb
 import mosquitto
-from time import strftime
+#from time import strftime
 import base64
+#import multiprocessing
+from apscheduler.scheduler import Scheduler
 
 def timestamp(include_ms=True):
     if include_ms:
@@ -381,7 +383,7 @@ class CV(object):
         """blur(im[, size]) -> im
 
         MedianBlur the image"""
-        im = cv2.medianBlur(im, size)
+        return cv2.medianBlur(im, size)
 
     def zeros(self, w=None, h=None, depth=3, shape=()):
         """zeros([ w[, h[, depth[, shape]]]]) -> dst
@@ -468,7 +470,7 @@ class Webcam(object):
     AUTO_CONNECT = True
     FORCE_RESIZE = True
     RESIZE_SIZE = 480
-    CAMID = 0
+    CAMID = 1
     JPEG_COMPRESSION = 95
 
     resolutions = [480, 720, 1080]
@@ -503,6 +505,7 @@ class Webcam(object):
         self.do_process_bmd = True
         self.do_process_sim = True
 
+        self.f = C.zeros(depth=3)
         self.frame = C.zeros(depth=3)
         #self.frameAsJpeg = None
         self.frameN = 1
@@ -514,9 +517,15 @@ class Webcam(object):
 
         self.resizeSize = Webcam.RESIZE_SIZE
 
+        self.camThread = Thread(target=self.cam_read_loop)
         self.cvThread = Thread(target=self.capture_loop)
         self.timerThread = Thread(target=self.timer_loop)
         self.processThread = Thread(target=self.process_loop)
+
+        self.camDoReadEvent= Event()
+        self.camDoReadEvent.clear()
+        self.camDoneReadEvent= Event()
+        self.camDoneReadEvent.clear()
 
         self.captureEvent = Event()
         self.captureEvent.clear()
@@ -532,6 +541,7 @@ class Webcam(object):
             self.auto_connect = args['auto_connect']
         if self.auto_connect:
             self.cam = cv2.VideoCapture(self.cam_id)
+        self.camThread.start()
         self.cvThread.start()
         self.timerThread.start()
         self.processThread.start()
@@ -541,13 +551,17 @@ class Webcam(object):
     def stop(self):
         self.stopEvent.set()     # end timer loop
         self.captureEvent.set()  # unblock capture loop
+        self.camDoReadEvent.set()  # unblock capture loop
+        self.camDoneReadEvent.set()  # unblock capture loop
         self.processEvent.set()  # unblock processing loop
         MQ.stop()  # be nice and stop Mosquitto cleanly
         if W.cvThread.is_alive():
+            print "Joining CV thread"
             W.cvThread.join(3)
         if self.cam:
             W.cam.release()
         cv2.destroyAllWindows()
+        print "Webcam stopped"
 
     def fps_update(self):
         self.frameTimes.rotate()
@@ -569,7 +583,20 @@ class Webcam(object):
             self.fps2 = 0.0
         self.frameN += 1
 
+    def cam_read_loop(self):
+        while True:
+            self.camDoReadEvent.wait()
+            self.camDoReadEvent.clear()
+            if self.stopEvent.isSet(): break
+            #print "reading"
+            self.ret, self.f = self.cam.read()
+            #print "read"
+            self.camDoneReadEvent.set()
+            if self.stopEvent.isSet(): break
+
     def capture_loop(self):
+        sched = Scheduler()
+        sched.start()
         while True:
             if G.DBG_LOCK: print "cv_loop wait camLock... ",
             with G.camLock:
@@ -584,12 +611,41 @@ class Webcam(object):
                             WS.stop()
                             break
                     else:
-                        self.ret, f = self.cam.read()
+                        #pool = multiprocessing.Pool(1, maxtasksperchild=1)
+                        #result = pool.apply_async(self.cam.read)
+                        #pool.close()
+                        #self.ret, f = self.cam.read()
+                        #try:
+                        #    self.ret, f = result.get(0.5)
+                        #except multiprocessing.TimeoutError:
+                        #    pool.terminate()
+                        #    self.ret = False
+
+                        #timeout_t = datetime.datetime.now() + datetime.timedelta(3)
+                        #timeout_job = sched.add_date_job(self.cam_read, timeout_t)
+
+                        self.camDoReadEvent.set()
+                        self.camDoneReadEvent.wait(1)
+                        if self.stopEvent.isSet(): break
+                        if self.camDoneReadEvent.isSet():
+                            f = self.f
+                            self.camDoneReadEvent.clear()
+                        else:
+                            logging.error("Opencv camera interface timed out hanging - did you disconnect the webcam?")
+                            logging.error("Unrecoverable error - exiting")
+                            self.cam = None
+                            sleep(1.0)
+                            os.system("kill %d" % os.getpid())
+                            #self.camDoneReadEvent.clear()
+                            #break
+                            #raise KeyboardInterrupt()
+                            #sys.exit(1)
+
+                if G.DBG_LOCK: print "done with lock"
             if self.stopEvent.isSet(): break
             if (self.ret is False) and self.cam:
                 self.cam = None
                 logging.warning("CV2 camera disconnect")
-                #TODO
             if self.cam and self.do_process_webcam:
                 self.frameRawH, self.frameRawW = f.shape[:2]
                 f = C.resize_max(f, self.resizeSize)
@@ -610,9 +666,12 @@ class Webcam(object):
                     #cv2.imwrite('static/images/frame.jpg', f)
                     #
                     self.fps_update()
+            if G.DBG_LOCK: print "wait 4 capture"
             self.captureEvent.wait()
             self.captureEvent.clear()
+            if G.DBG_LOCK: print "got capture"
             if self.stopEvent.isSet(): break
+        if G.DBG_LOCK: print "loop's done"
 
 
     def timer_loop(self):
@@ -648,7 +707,8 @@ class Webcam(object):
             if self.stopEvent.isSet(): break
 
     def cv_process(self):
-        HSV_THRESH = 80
+        HSV_THRESH = 150
+        COLOR_VAL_MAX = 255
         frameSet = {}
         #
         #TODO cv processing
@@ -685,6 +745,9 @@ class Webcam(object):
         f = frameSet[0].copy()
         w = f.shape[1]
         h = f.shape[0]
+        #f = C.blur(f, 5)
+        #f = cv2.blur(f, (3,3))
+        #f = cv2.medianBlur(f, 3)
 
         black=np.zeros((h,w),np.uint8)
         hist=np.zeros((180,256),np.uint8)
@@ -736,13 +799,16 @@ class Webcam(object):
         cv2.filter2D(dst,-1,disc,dst)
         vmask = val.copy()
         vmask[vmask < db.color_val] = 0
-        vmask[vmask > db.color_val] = 255
+        vmask[vmask > COLOR_VAL_MAX] = 0
+        vmask[vmask > 0] = 255
         dst= cv2.bitwise_and(dst, vmask)
         ret,thresh = cv2.threshold(dst,HSV_THRESH,255,0)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ERODE,(int(db.kernel_k),int(db.kernel_k)))
-        kernel2 = cv2.getStructuringElement(cv2.MORPH_ERODE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
+        #thresh = cv2.dilate(thresh,None)
+        thresh = cv2.erode(thresh,None)
+        kernel = cv2.getStructuringElement(cv2.MORPH_OPEN,(int(db.kernel_k),int(db.kernel_k)))
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_OPEN,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
-        #cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
+        ##cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
         frameSet[2] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
 
@@ -757,7 +823,7 @@ class Webcam(object):
 
         # Find contours with cv2.RETR_CCOMP
         thresh2 = thresh.copy()
-        contours,hierarchy = cv2.findContours(thresh2,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+        contours,hierarchy = cv2.findContours(thresh2,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
         # find internal contours & accept their parents
         blocks = []
@@ -778,6 +844,7 @@ class Webcam(object):
                 and cv2.contourArea(cnt_inner)>int((w*0.05)*(h*0.05))
                 and area > parentArea*0.4
                 and parentArea > rectArea*0.8
+                and hierarchy[0,parent,3] == -1 # ensure parent is top-level
             ):
                 xx,yy,ww,hh = cv2.boundingRect(cnt)
                 m = cv2.moments(cnt)
@@ -1556,7 +1623,6 @@ class RPCHandler(JSONRPCHandler):
         #TODO disregard if camera not currently running
         #
         #self.cam = cv2.VideoCapture(self.cam_id)
-        camId = 0
         ret = False
         with G.camLock:
             startCamId = W.cam_id
@@ -1565,10 +1631,10 @@ class RPCHandler(JSONRPCHandler):
                 W.cam_id += 1
                 W.cam = cv2.VideoCapture(W.cam_id)
                 ret, f = W.cam.read()
-                if not ret:
-                    W.cam_id = -1
                 if (W.cam_id == startCamId) and (not ret):
                     break
+                if not ret:
+                    W.cam_id = -1
             camId = W.cam_id
         if (W.cam is None) or (not ret):
             msg = "Failed to find a video source"
@@ -1632,6 +1698,7 @@ if __name__ == "__main__":
     logging.info("stop "+str(datetime.datetime.now()))
     print "Cleanup"
     W.stop()
+    print "Cleanup finished"
 
 #======================================================================
 """
