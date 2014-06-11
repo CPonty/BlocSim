@@ -4,6 +4,7 @@
     BlocSim
 """
 #from flask import Flask, request
+from math import hypot
 from threading import Thread, RLock, Event, Timer
 from collections import deque
 #from signal import signal, SIGINT
@@ -32,7 +33,21 @@ import mosquitto
 #from time import strftime
 import base64
 #import multiprocessing
-from apscheduler.scheduler import Scheduler
+#from apscheduler.scheduler import Scheduler
+#import signal
+import re
+
+def purge_pyc():
+    global dbg_file
+    folder=os.path.dirname(os.path.realpath(__file__))
+    pat=".*\.pyc"
+    for f in os.listdir(folder):
+        if re.search("^.*\.pyc$",f):
+            os.remove(os.path.join(folder,f))
+
+purge_pyc()
+from cvcommon import *
+purge_pyc()
 
 def timestamp(include_ms=True):
     if include_ms:
@@ -48,6 +63,9 @@ def recursive_tuples(arr):
         return tuple(recursive_tuples(i) for i in arr)
     except TypeError:
         return arr
+
+class TimedOutException(Exception):
+    pass
 
 #======================================================================
 
@@ -158,11 +176,11 @@ class Globals(object):
             self.db.set("black_val", ["min", 0,255, 30])
             self.db.set("green_hue", [True, 0,180, 82,94])
             self.db.set("red_hue", [True, 0,180, 10,170])
-            self.db.set("color_sat", ["max", 0,255, 60])
-            self.db.set("color_val", ["max", 0,255, 80])
+            self.db.set("color_sat", ["max", 0,255, 22])
+            self.db.set("color_val", ["max", 0,255, 70])
             self.db.set("connector_gap", ["min", 3,100, 20])
             self.db.set("kernel_k", ["min", 3,25, 3])
-            self.db.set("dot_size", [True, 5,255, 20,100])
+            self.db.set("dot_size", [True, 5,255, 10,100])
             self.db.set("area_ratio", ["max", 1,100, 80])
 
             print "regenerating db:"
@@ -470,7 +488,7 @@ class Webcam(object):
     AUTO_CONNECT = True
     FORCE_RESIZE = True
     RESIZE_SIZE = 480
-    CAMID = 1
+    CAMID = 0
     JPEG_COMPRESSION = 95
 
     resolutions = [480, 720, 1080]
@@ -518,6 +536,7 @@ class Webcam(object):
         self.resizeSize = Webcam.RESIZE_SIZE
 
         self.camThread = Thread(target=self.cam_read_loop)
+        self.camThread.daemon = True
         self.cvThread = Thread(target=self.capture_loop)
         self.timerThread = Thread(target=self.timer_loop)
         self.processThread = Thread(target=self.process_loop)
@@ -584,19 +603,33 @@ class Webcam(object):
         self.frameN += 1
 
     def cam_read_loop(self):
+        #def raise_ioerr():
+        #    raise IOError("Reading from device timed out")
+        #logging.warning("cam_read_loop()")
         while True:
             self.camDoReadEvent.wait()
             self.camDoReadEvent.clear()
             if self.stopEvent.isSet(): break
             #print "reading"
             self.ret, self.f = self.cam.read()
+            #signal.signal(signal.SIGALRM, raise_ioerr)
+            #signal.alarm(1)
+            #try:
+            #    self.ret, self.f = self.cam.read()
+            #except IOError as e:
+            #    self.ret = False
+            #    self.cam = None
+            #    logging.error(e.message)
+            #signal.alarm(0)
             #print "read"
             self.camDoneReadEvent.set()
             if self.stopEvent.isSet(): break
+        logging.warning("cam_read_loop instance exiting")
+
 
     def capture_loop(self):
-        sched = Scheduler()
-        sched.start()
+        #sched = Scheduler()
+        #sched.start()
         while True:
             if G.DBG_LOCK: print "cv_loop wait camLock... ",
             with G.camLock:
@@ -631,11 +664,21 @@ class Webcam(object):
                             f = self.f
                             self.camDoneReadEvent.clear()
                         else:
-                            logging.error("Opencv camera interface timed out hanging - did you disconnect the webcam?")
+                            self.camDoneReadEvent.clear()
+                            logging.error("OpenCV camera interface hanging - did you disconnect the webcam?")
+                            #logging.warning("Unrecoverable error in camera read thread - creating a new one...")
+                            #self.cam = None
+                            #self.camThread = Thread(target=self.cam_read_loop)
+                            #self.camThread.daemon = True
+                            #self.camThread.start()
+                            #logging.warning("thread.start()")
                             logging.error("Unrecoverable error - exiting")
+                            #logging.error("Unrecoverable error - restarting")
                             self.cam = None
                             sleep(1.0)
                             os.system("kill %d" % os.getpid())
+
+                            #os.execl(sys.executable, sys.executable, * sys.argv)
                             #self.camDoneReadEvent.clear()
                             #break
                             #raise KeyboardInterrupt()
@@ -840,8 +883,9 @@ class Webcam(object):
                 rect = cv2.minAreaRect(cnt)
                 rect = np.int0(cv2.cv.BoxPoints(rect))
                 rectArea = cv2.contourArea(rect)
+                (blockw,blockh),wl,hl = cv2_minRectAxes(rect)
             if (parent != -1
-                and cv2.contourArea(cnt_inner)>int((w*0.05)*(h*0.05))
+                and cv2.contourArea(cnt_inner)>int((w*0.04)*(h*0.04))
                 and area > parentArea*0.4
                 and parentArea > rectArea*0.8
                 and hierarchy[0,parent,3] == -1 # ensure parent is top-level
@@ -853,8 +897,8 @@ class Webcam(object):
                     "cnt": cnt,
                     "x": xx,
                     "y": yy,
-                    "w": ww,
-                    "h": hh,
+                    "w": blockw,
+                    "h": blockh,
                     "cx": cx,
                     "cy": cy,
                     "rect": rect,
@@ -882,10 +926,11 @@ class Webcam(object):
         vmask[vmask > db.color_val] = 255
         dst= cv2.bitwise_and(dst, vmask)
         ret,thresh = cv2.threshold(dst,HSV_THRESH,255,0)
+        thresh = cv2.erode(thresh,None)
         kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(int(db.kernel_k),int(db.kernel_k)))
         kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
-        cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
+        #cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
         frameSet[5] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
 
@@ -906,9 +951,9 @@ class Webcam(object):
             parent = hierarchy[0,i,3]
             xx,yy,ww,hh = cv2.boundingRect(cnt)
             if (parent == -1
-                and cv2.contourArea(cnt)>int((ww*0.02)*(hh*0.02))
-                and ww>0 and hh>0
-                and 1.0*ww/hh > (70./100) and 1.0*hh/ww < (100/70.)
+                and cv2.contourArea(cnt)>int((ww*0.01)*(hh*0.01))
+                and ww>5 and hh>5
+                and 1.0*ww/hh > (60./100) and 1.0*ww/hh < (100/60.)
             ):
                 (xx,yy),rr = cv2.minEnclosingCircle(cnt)
                 m = cv2.moments(cnt)
@@ -920,54 +965,99 @@ class Webcam(object):
                     "r": rr,
                     "cx": cx,
                     "cy": cy,
-                    "id": len(blocks),
-                    "type": -1
+                    "id": len(dots),
+                    "type": -1,
+                    "dot": -1
                 }]
         if len(dots) > 2:
             radii = [(d["id"], d["r"]) for d in dots]
             radii.sort()
-            avg_r = radii[len(radii)/2][1]
+            #reference_r = radii[len(radii)/2][1]
+            #print radii[0], radii[-1]
+            reference_r = radii[-3][1]
+            """
+            usedDots = []
             for i,dot in enumerate(dots):
-                if dot["r"] > avg_r*2:
-                    dots.pop(i)
+                if dot["r"] > reference_r*2 or dot["r"] < reference_r/4:
+                    #dots.pop(i)
+                    pass
+                else:
+                    usedDots += [dot]
+            dots = usedDots
+            """
 
         for i,dot in enumerate(dots):
             cv2.circle(frameSet[7],(int(dot["x"]),int(dot["y"])),int(dot["r"]),(0,255,0),2)
             cv2.circle(frameSet[7],(int(dot["cx"]),int(dot["cy"])),3,255,-1)
 
-        usedBlocks = []
-        usedDots = []
-        oldDotList = list(dots)
-        oldBlockList = list(blocks)
-        for i,block in enumerate(oldBlockList):
-            for j,dot in enumerate(oldDotList):
+        usedBlocks = dict()
+        usedDots = dict()
+        #oldDotList = list(dots)
+        oldDotList = dict()
+        for dot in dots:
+            oldDotList[dot["id"]] = dot
+        #oldBlockList = list(blocks)
+        oldBlockList = dict()
+        for block in blocks:
+            oldBlockList[block["id"]] = block
+
+        #print len(oldDotList), len(oldBlockList)
+        #print len(dots), len(blocks)
+
+        for i,block in oldBlockList.iteritems():
+            for j,dot in oldDotList.iteritems():
+                #print block
+                #print dot
                 if cv2.pointPolygonTest(block["rect"], (dot["cx"],dot["cy"]), False) > 0:
-                    usedBlocks += [block]
-                    usedDots += [dot]
-                    block["dot"] = dot["id"]
-                    if (dot["cx"] < block["cx"]):
-                        if (dot["cy"] < block["cy"]):
-                            block["type"] = 0
+                    add = False
+                    if block["dot"] == -1:
+                        add = True
+                    elif oldDotList[block["dot"]]["r"] < dot["r"]:
+                        add = True
+                    if add:
+                        usedBlocks[i] = block
+                        usedDots[j] = dot
+                        block["dot"] = dot["id"]
+                        if (dot["cx"] < block["cx"]):
+                            if (dot["cy"] < block["cy"]):
+                                block["type"] = 0
+                            else:
+                                block["type"] = 3
                         else:
-                            block["type"] = 3
-                    else:
-                        if (dot["cy"] < block["cy"]):
-                            block["type"] = 1
-                        else:
-                            block["type"] = 2
-                    break
+                            if (dot["cy"] < block["cy"]):
+                                block["type"] = 1
+                            else:
+                                block["type"] = 2
+                        break
         blocks = usedBlocks
         dots = usedDots
-        for i,block in enumerate(blocks):
-            cv2.drawContours(frameSet[8], [block["rect"]], -1, (0,255,0), 2)
+        #for i,block in blocks.iteritems():
+        #    cv2.drawContours(frameSet[8], [block["rect"]], -1, (0,255,0), 2)
             #cv2.rectangle(frameSet[8],(block["x"],block["y"]),(block["x"]+block["w"],block["y"]+block["h"]),(0,255,0),2)
-            cv2.circle(frameSet[8],(int(block["cx"]),int(block["cy"])),3,255,-1)
+        #    cv2.circle(frameSet[8],(int(block["cx"]),int(block["cy"])),3,255,-1)
             #TODO
-        for i,dot in enumerate(dots):
+        #for i,dot in dots.iteritems():
+        #    cv2.circle(frameSet[8],(int(dot["x"]),int(dot["y"])),int(dot["r"]),(0,255,0),2)
+        #    cv2.circle(frameSet[8],(int(dot["cx"]),int(dot["cy"])),3,255,-1)
+        usedBlocks = dict()
+        for i,block in blocks.iteritems():
+            cv2.drawContours(frameSet[8], [block["rect"]], -1, (0,255,0), 2)
+            cv2.circle(frameSet[8],(int(block["cx"]),int(block["cy"])),3,255,-1)
+            dot = dots[block["dot"]]
+            cv2.line(frameSet[8], (int(dot["cx"]),int(dot["cy"])), (int(block["cx"]),int(block["cy"])), (255,0,0), 2)
             cv2.circle(frameSet[8],(int(dot["x"]),int(dot["y"])),int(dot["r"]),(0,255,0),2)
             cv2.circle(frameSet[8],(int(dot["cx"]),int(dot["cy"])),3,255,-1)
-        for i,block in enumerate(blocks):
-            cv2.putText(frameSet[8], "id: %s | type: %d" % (block["id"], block["type"]), (int(block["x"]),int(block["cy"])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255))
+            dot_dist = hypot( dot["cx"]-block["cx"], dot["cy"]-block["cy"] )
+            #print block["id"], dot_dist, block["w"], block["h"]
+            if dot_dist < block["w"]*0.3 or dot_dist < block["h"]*0.3:
+                cv2.drawContours(frameSet[8], [block["rect"]], -1, (0,0,255), 2)
+                cv2.line(frameSet[8], (int(dot["cx"]),int(dot["cy"])), (int(block["cx"]),int(block["cy"])), (0,0,255), 2)
+                cv2.circle(frameSet[8],(int(dot["x"]),int(dot["y"])),int(dot["r"]),(0,0,255),2)
+            else:
+                usedBlocks[i] = block
+                cv2.putText(frameSet[8], "id: %s | type: %d" % (block["id"], block["type"]), (int(block["x"]),int(block["cy"])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255))
+
+        blocks = usedBlocks
         #print "====="
 
         # get solid contours, discard everything too small or too big
@@ -1024,7 +1114,7 @@ class Webcam(object):
                     "y": int(block["cy"]),
                     "w": int(block["w"]),
                     "h": int(block["h"])
-                } for block in blocks],
+                } for i,block in blocks.iteritems()],
                 "connectors": [],
                 "nodes": [],
                 "timestamp": timestamp(),
@@ -1190,11 +1280,11 @@ class SockJSHandler(sockjs.tornado.SockJSConnection):
         self.broadcast_timer.start()
 
     @staticmethod
-    def rpc_queue_add(name, args=[]):
+    def rpc_queue_add(name, msg, args=()):
         #print msg
         for c in SockJSHandler.sock_clients:
             with c.state["rpc_lock"]:
-                c.state["rpc_queue"] += [timestamp(False)+"\t"+str(name)+"\t"+str(args)]
+                c.state["rpc_queue"] += [timestamp(False)+"\t"+str(name)+"\t"+str(args)+"\t"+str(msg)]
 
     def on_open(self, info):
         if G.DBG_SOCKET: logging.debug("SockJSHandler %d open" % self.id)
@@ -1527,20 +1617,22 @@ class RPCHandler(JSONRPCHandler):
     def helloworld(self, *args):
         msg = "Hello world!"
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add("helloworld", args)
+        SockJSHandler.rpc_queue_add("helloworld", msg, args)
         return msg
 
     def echo(self, s):
         msg = s
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("echo", msg, [s])
         return msg
 
     def shutdown(self):
         WS.stop()
         msg = 'Server shutdown at '+str(datetime.datetime.now())
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("shutdown", msg)
         return msg
 
     def save_image(self):
@@ -1550,7 +1642,8 @@ class RPCHandler(JSONRPCHandler):
             cv2.imwrite(fname, W.frameRaw)
         msg = "Image saved: "+fname
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("save_image", msg)
         return msg
 
     def save_state(self):
@@ -1575,7 +1668,8 @@ class RPCHandler(JSONRPCHandler):
         f.close()
         msg = "State saved: "+dname
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("save_state", msg)
         return msg
 
     def get_config(self):
@@ -1583,7 +1677,8 @@ class RPCHandler(JSONRPCHandler):
             db = G.db.db.copy()
         msg = json.dumps(db)
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("get_config", msg)
         return msg
 
     def set_config(self, k, val):
@@ -1591,7 +1686,8 @@ class RPCHandler(JSONRPCHandler):
             G.db.set(k, val)
         msg = "Key %s set to %s" % (str(k), str(val))
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("set_config", msg, [k, val])
         return msg
 
     def db_load(self):
@@ -1599,7 +1695,8 @@ class RPCHandler(JSONRPCHandler):
             G.load_db()
         msg = "Keystore database config.db reloaded"
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("db_load", msg)
         return msg
 
     def db_save(self):
@@ -1607,7 +1704,8 @@ class RPCHandler(JSONRPCHandler):
             G.save_db()
         msg = "Keystore database config.db saved"
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("db_save", msg)
         return msg
 
     def db_defaults(self):
@@ -1615,7 +1713,26 @@ class RPCHandler(JSONRPCHandler):
             G.gen_defaults()
         msg = "Keystore database regenerated"
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("db_defaults", msg)
+        return msg
+
+    def db_save_defaults(self):
+        with G.dbLock:
+            G.save_defaults()
+        msg = "Keystore database defaults.db saved"
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("db_save_defaults", msg)
+        return msg
+
+    def db_load_defaults(self):
+        with G.dbLock:
+            G.load_defaults()
+        msg = "Keystore database defaults.db reloaded"
+        if G.DBG_RPC: logging.info("RPC: "+msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("db_load_defaults", msg)
         return msg
 
     def cycle_webcam(self):
@@ -1641,7 +1758,8 @@ class RPCHandler(JSONRPCHandler):
         else:
             msg = 'Switched to next available video source: '+str(camId)
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("cycle_webcam", msg)
         return msg
 
     def disconnect_webcam(self):
@@ -1649,7 +1767,8 @@ class RPCHandler(JSONRPCHandler):
             W.cam = None
         msg = 'Disconnected video source'
         if G.DBG_RPC: logging.info("RPC: "+msg)
-        SockJSHandler.rpc_queue_add(msg)
+        #SockJSHandler.rpc_queue_add(msg)
+        SockJSHandler.rpc_queue_add("disconnect_webcam", msg)
         return msg
 """
     def add(self, x, y):

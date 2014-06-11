@@ -217,9 +217,12 @@ Webcam
         <div class="buttonset" style="display: inline-block">
             <button id="db-save">Save</button>
             <button id="db-load">Load</button>
-            <button id="db-defaults">Use Defaults</button>
+            <button id="db-save-defaults">Save as defaults</button>
+            <button id="db-load-defaults">Load from defaults</button>
+            <button id="db-defaults">Re-generate config</button>
         </div>
-        <span style="width:1em"> &nbsp; </span>
+        <!--<span style="width:1em"> &nbsp; </span>-->
+        <br/><br/>
         <div class="buttonset" style="display: inline-block">
             <input value="1" type="checkbox" id="webcam-tab-check-fromfile">
             <label for="webcam-tab-check-fromfile"> Load Frame </label>
@@ -310,6 +313,9 @@ Webcam
     }
     else if (e.which==68) { // D
       $( "#webcam-sidebar-cycle" ).click();
+    }
+    else if (e.which==79) { // O
+      $( "#server-sidebar-shutdown" ).click();
     }
     /*
     if (e.which==80) { // P
