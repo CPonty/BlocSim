@@ -38,6 +38,7 @@ body {
 	padding: 0.5em;
 	padding-top: 0.5em;
 	overflow: hidden;
+	z-index: 3;
 }
 .left {
     position: fixed;
@@ -73,7 +74,7 @@ body {
     /*padding: 1em;*/
     margin: 1em;
     margin-right: 0em;
-    padding-left: 2em;
+    padding-left: 0em;
     /*
     overflow-y: visible;
     height: 100% auto;
@@ -202,17 +203,37 @@ hr {
   }
 .toolbar-nw {
 	float: left;
+	font-size: 1.25em;
 }
 .toolbar-ne {
 	float: right;
+	font-size: 1.25em;
 }
-.toolbar-ne button,.toolbar-nw button,
+.toolbar-e {
+	float: right;
+	margin-right: 1em;
+}
+
+.toolbar-ne button,.toolbar-nw button, .toolbar-e button,
 .toolbar-ne a,     .toolbar-nw a,
-.toolbar-ne input, .toolbar-nw input,
-.toolbar-ne label, .toolbar-nw label {
+.toolbar-ne input, .toolbar-nw input,  .toolbar-e input,
+.toolbar-ne label, .toolbar-nw label , .toolbar-e label {
 	/*border-radius: 0px;*/
 	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 0
+}
+
+.toolbar-top {
+	margin-left: 1em;
+}
+
+.toolbar-top button,
+.toolbar-top a,     
+.toolbar-top input, 
+.toolbar-top label {
+	/*border-radius: 0px;*/
+	border-top-left-radius: 0;
+	border-top-right-radius: 0
 }
 
 /*
@@ -373,9 +394,9 @@ hr {
 }
 
 .textspan {
-	min-height: 3em;
-	margin-bottom: 3em;
-	margin-top: 1.5em;
+	min-height: 1.5em;
+	margin-bottom: 0.75em;
+	margin-top: 1em;
 	margin-left: 1.5em;
 	width: auto;
 }
@@ -403,7 +424,7 @@ hr {
 .unhyperlink:hover {color: black;} 
 .unhyperlink:active {color: black;}
 .highz-1 {
-	z-index: 1001;
+	z-index: 2147483600;
 }
 .topz-1 {
 	z-index: 2147483601;
@@ -444,9 +465,70 @@ hr {
 	/*background: #4f4f4f;*//*gray*/
 	width:1.5em;
 	height:1.5em;
+	left: 0;
 	-webkit-border-radius:0.75em;
 	-moz-border-radius:0.75em;
 	border-radius:0.75em;
 	margin-right: 0.5em;
 	margin-top: 0.35em;
+}
+
+/* ================================================================= */
+
+pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; white-space: pre-wrap; font-size: 1.4em; }
+.string { color: green; }
+.number { color: darkorange; }
+.boolean { color: blue; }
+.null { color: magenta; }
+.key { color: red; }
+
+.normaltext {
+	font-size: 0.75em;
+}
+
+.big-tt {
+	font-size: 1.6em;
+	padding-left: 1em;
+}
+
+.slider-clustered {
+	width: 15em; 
+	display:inline-block; 
+	padding: 0.5em;
+	margin-right: 0.5em;
+	z-index: -1;
+}
+
+.grey-panel {
+    background-color: #e7e8ef;
+    box-shadow: 5px 5px 5px #cfcfcf;
+    margin-right: 0em;
+    margin-left: 0em;
+    margin-bottom: 2em;
+    padding: 1em;
+}
+
+div .resizable {
+	resize: horizontal;
+	overflow:auto;
+}
+
+#framebar-wrap {
+	width: auto; 
+	border: 1px solid black;
+	height: 0.4em; 
+	border-radius: 0.2em; 
+	margin-top: 0.4em; 
+	border: 1px solid gray; 
+}
+
+#framebar {
+	/*background-color: #96f226;*/
+	background-color: #b8ec79;
+	width: 0%;
+	height: 100%;
+}
+
+::-webkit-scrollbar { 
+    display: none; 
 }

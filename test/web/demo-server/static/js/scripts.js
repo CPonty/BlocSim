@@ -164,6 +164,14 @@ blocsim_rpc.handle.db_defaults = function(response) {
         rpc_call_alert_handler(response);
         window.setTimeout(function(){location.reload(true);}, 1000);
 };
+blocsim_rpc.handle.db_save_defaults = function(response) {
+        rpc_call_alert_handwler(response);
+        window.setTimeout(function(){location.reload(true);}, 1000);
+};
+blocsim_rpc.handle.db_load_defaults = function(response) {
+        rpc_call_alert_handler(response);
+        window.setTimeout(function(){location.reload(true);}, 1000);
+};
 blocsim_rpc.handle.db_save = rpc_call_alert_handler;
 blocsim_rpc.handle.cycle_webcam = rpc_call_alert_handler;
 blocsim_rpc.handle.disconnect_webcam = rpc_call_alert_handler;
@@ -343,20 +351,32 @@ $(function() {
 		blocsim_vars.stream = false;
 		window.setTimeout(function(){rpc_call("db_load");}, 100);
 	});
-
 	$('#db-save:button').click(function() {
 		//alert('webcam-button-eject');
 		//$('#server-sidebar-eject:checkbox').prop('checked', true);
 		//sockjs_disconnect();
 		window.setTimeout(function(){rpc_call("db_save");}, 100);
 	});
-
 	$('#db-defaults:button').click(function() {
 		//alert('webcam-button-eject');
 		//$('#server-sidebar-eject:checkbox').prop('checked', true);
 		//sockjs_disconnect();
 		blocsim_vars.stream = false;
 		window.setTimeout(function(){rpc_call("db_defaults");}, 100);
+	});
+	$('#db-save-defaults:button').click(function() {
+		//alert('webcam-button-eject');
+		//$('#server-sidebar-eject:checkbox').prop('checked', true);
+		//sockjs_disconnect();
+		blocsim_vars.stream = false;
+		window.setTimeout(function(){rpc_call("db_save_defaults");}, 100);
+	});
+	$('#db-load-defaults:button').click(function() {
+		//alert('webcam-button-eject');
+		//$('#server-sidebar-eject:checkbox').prop('checked', true);
+		//sockjs_disconnect();
+		blocsim_vars.stream = false;
+		window.setTimeout(function(){rpc_call("db_load_defaults");}, 100);
 	});
 
 	$('#webcam-sidebar-eject:button').click(function() {
