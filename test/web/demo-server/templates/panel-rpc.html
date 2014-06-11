@@ -1,0 +1,28 @@
+<!--
+Block Model Diagram
+<br/><br/><br/>
+-->
+
+<br/>
+<a href="#!" id="rpc-tab-accordion-link" class="tab-accordion unhyperlink">
+    <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+         class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
+    <span>Remote Procedure Call log</span>
+</a>
+<span class="buttonset toolbar-e" style="">
+    <input value="1" type="checkbox" id="rpc-tab-check-pause">
+    <label for="rpc-tab-check-pause"> Pause </label>
+    <button id="rpc-tab-clear-button"> Clear </button>
+</span>
+<hr/>
+<pre id="rpc-tab-panel" class="tab-accordion-area textspan normaltext">
+
+</pre>
+<br/>
+Connect to service (Python example):
+<pre id="rpc-tab-hint-text" class="big-tt textspan pre" style="color: green">
+    from jsonrpclib import Server
+    server = Server('http://localhost:8080/rpc')
+    print server.get_config()
+</pre>
+<br/><br/><br/><br/>
