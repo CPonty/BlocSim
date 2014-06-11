@@ -825,8 +825,9 @@ class Webcam(object):
         #cv2.rectangle(f,(0,int((db.bounds_y[1])/100.0*h)),(w,h),(255,255,255),-1)
         #cv2.rectangle(f,(int((db.bounds_x[1])/100.0*w),0),(w,h),(255,255,255),-1)
 
-        for i in [1,4,7,8,11,12,13,14,15,16]:
+        for i in [1,4,7,8,11,12,13,14,15]:
             frameSet[i] = f.copy()
+        frameSet[16] = np.ones(frameSet[1].shape)*255
 
         #bw_red =         thresh = cv2.inRange(hsv,np.array((h0,s0,v0)), np.array((h0,s1,v1)))
 
@@ -885,7 +886,7 @@ class Webcam(object):
                 rectArea = cv2.contourArea(rect)
                 (blockw,blockh),wl,hl = cv2_minRectAxes(rect)
             if (parent != -1
-                and cv2.contourArea(cnt_inner)>int((w*0.04)*(h*0.04))
+                and cv2.contourArea(cnt_inner)>int((w*0.03)*(h*0.03))
                 and area > parentArea*0.4
                 and parentArea > rectArea*0.8
                 and hierarchy[0,parent,3] == -1 # ensure parent is top-level
@@ -904,7 +905,8 @@ class Webcam(object):
                     "rect": rect,
                     "id": len(blocks),
                     "type": -1,
-                    "dot": -1
+                    "dot": -1,
+                    "node_connections": []
                 }]
         #print "====="
         for i,block in enumerate(blocks):
@@ -1058,6 +1060,14 @@ class Webcam(object):
                 cv2.putText(frameSet[8], "id: %s | type: %d" % (block["id"], block["type"]), (int(block["x"]),int(block["cy"])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255))
 
         blocks = usedBlocks
+
+        avg_block_wh = 5
+        for i,block in blocks.iteritems():
+            avg_block_wh += block["w"]
+            avg_block_wh += block["h"]
+        if len(blocks) > 0:
+            avg_block_wh /= float(len(blocks)*2)
+
         #print "====="
 
         # get solid contours, discard everything too small or too big
@@ -1071,7 +1081,152 @@ class Webcam(object):
         # =============================================================
         # black
 
+        hsvt = cv2.cvtColor(f,cv2.COLOR_BGR2HSV)
+        hue,sat,val = cv2.split(hsvt)
+        dst = cv2.calcBackProject([hsvt],[1,2],roiHistBlk,[0,256,0,256],1)
+        disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+        cv2.filter2D(dst,-1,disc,dst)
+        #vmask = val.copy()
+        #vmask[vmask < db.color_val] = 0
+        #vmask[vmask > db.color_val] = 255
+        #dst= cv2.bitwise_and(dst, vmask)
+        ret,thresh = cv2.threshold(dst,HSV_THRESH,255,0)
+        #thresh = cv2.erode(thresh,None)
+        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(int(db.kernel_k),int(db.kernel_k)))
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(int(db.kernel_k*1.5),int(db.kernel_k*1.5)))
+        cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
+        cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
+        cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
 
+        for i,block in oldBlockList.iteritems():
+            cv2.drawContours(thresh, [block["rect"]], -1, 0, -1)
+
+        frameSet[9] = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+
+        thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
+        f2 = cv2.bitwise_and(f,thresh3) #filtered image
+        frameSet[10] = f2.copy()#cv2.cvtColor(f2, cv2.COLOR_GRAY2BGR)
+
+        # skip to 12
+        b_disc_w = int(avg_block_wh*0.3)
+        b_disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(b_disc_w, b_disc_w))
+        thresh = cv2.dilate(thresh,b_disc)
+
+        # Find contours with cv2.RETR_CCOMP
+        thresh2 = thresh.copy()
+        b_contours,b_hierarchy = cv2.findContours(thresh2,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+
+        threshb = np.zeros(thresh.shape, np.uint8)
+        for i,block in blocks.iteritems():
+            cv2.drawContours(threshb, [block["rect"]], -1, 255, -1)
+        threshc = cv2.bitwise_and(thresh, threshb)
+
+        threshc_bgr = cv2.cvtColor(threshc, cv2.COLOR_GRAY2BGR)
+        frameSet[12] = cv2.bitwise_or(frameSet[12], threshc_bgr)
+        frameSet[12] = cv2.bitwise_or(frameSet[12], frameSet[9])
+
+        threshc2 = threshc.copy()
+        c_contours,c_hierarchy = cv2.findContours(threshc2,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+
+        nodes = dict()
+        for i,cnt in enumerate(c_contours):
+            # Check if it is an external contour and its area is more than 100
+            #if hierarchy[0,i,3] == -1 and cv2.contourArea(cnt)>100:
+            #print "hierachy", hierarchy[0,i,3]
+            parent = c_hierarchy[0,i,3]
+            xx,yy,ww,hh = cv2.boundingRect(cnt)
+            if (parent == -1
+                and cv2.contourArea(cnt)>int((ww*0.01)*(hh*0.01))
+                and ww>5 and hh>5
+            ):
+                (xx,yy),rr = cv2.minEnclosingCircle(cnt)
+                m = cv2.moments(cnt)
+                cx,cy = m['m10']/m['m00'],m['m01']/m['m00']
+                nodes[i] = {
+                             "cnt": cnt,
+                             "x": xx,
+                             "y": yy,
+                             "r": rr,
+                             "cx": cx,
+                             "cy": cy,
+                             "id": len(nodes),
+                             "type": -1,
+                             "dot": -1,
+                             "node_connections": [],
+                             "block_connections": []
+                         }
+        for i,node in nodes.iteritems():
+            #cv2.drawContours(frameSet[13], [node["cnt"]], -1, (255,255,255), -1)
+            for j in xrange(13,15):
+                cv2.circle(frameSet[j],(int(node["cx"]),int(node["cy"])),int(node["r"]/2 + 1),255,-1)
+                cv2.circle(frameSet[j],(int(node["cx"]),int(node["cy"])),3,(0,0,255),-1)
+
+        # X generate the node set
+        # X 13 - nodes
+
+        # for each block, check for nodes
+        # for each b_contour, get a list of nodes. connect them all to each other
+        # draw all the connections
+
+        for i,cnt in enumerate(b_contours):
+            connected_nodes=[]
+            for j,node in nodes.iteritems():
+                #print block
+                #print dot
+                if cv2.pointPolygonTest(cnt, (node["cx"],node["cy"]), False) >= 0:
+                    connected_nodes += [j]
+            for k in connected_nodes:
+                for l in connected_nodes:
+                    if k != l:
+                        nodes[k]["node_connections"] += [l]
+                        for m in xrange(14,17):
+                            cv2.line(frameSet[m],
+                                     (int(nodes[k]["cx"]),int(nodes[k]["cy"])),
+                                     (int(nodes[l]["cx"]),int(nodes[l]["cy"])),
+                                     (0,0,255), 2)
+            #if len(connected_nodes) > 0: print "connected %d nodes" % len(connected_nodes)
+
+        for i,block in blocks.iteritems():
+            connected_nodes=[]
+            for j,node in nodes.iteritems():
+                #print block
+                #print dot
+                if cv2.pointPolygonTest(block["rect"], (node["cx"],node["cy"]), False) >= 0:
+                    connected_nodes += [j]
+            for k in connected_nodes:
+                nodes[k]["block_connections"] += [i]
+                block["node_connections"] += [k]
+                for m in xrange(14,17):
+                    cv2.circle(frameSet[m],(int(block["cx"]),int(block["cy"])),3,(0,0,255),-1)
+                    cv2.line(frameSet[m],
+                             (int(nodes[k]["cx"]),int(nodes[k]["cy"])),
+                             (int(block["cx"]),int(block["cy"])),
+                             (0,0,255), 2)
+
+        # 14,15,16 - connection lines
+
+        for i,block in blocks.iteritems():
+            for j in xrange(15,17):
+                cv2.drawContours(frameSet[j], [block["rect"]], -1, (0,255,0), 2)
+                #cv2.circle(frameSet[j],(int(block["cx"]),int(block["cy"])),3,255,-1)
+                dot = dots[block["dot"]]
+                #if j==15: cv2.line(frameSet[j], (int(dot["cx"]),int(dot["cy"])), (int(block["cx"]),int(block["cy"])), (255,0,0), 2)
+                cv2.circle(frameSet[j],(int(dot["x"]),int(dot["y"])),int(dot["r"]),(0,255,0),2)
+                if j==15: cv2.circle(frameSet[j],(int(dot["cx"]),int(dot["cy"])),3,255,-1)
+                #dot_dist = hypot( dot["cx"]-block["cx"], dot["cy"]-block["cy"] )
+                #print block["id"], dot_dist, block["w"], block["h"]
+        for i,node in nodes.iteritems():
+            for j in xrange(15,17):
+                if j==15: cv2.circle(frameSet[j],(int(node["cx"]),int(node["cy"])),int(node["r"]/2 + 1),255,2)
+                cv2.circle(frameSet[j],(int(node["cx"]),int(node["cy"])),3,(0,0,255),-1)
+        for i,block in blocks.iteritems():
+            cv2.putText(frameSet[15], "id: %s | type: %d" % (block["id"], block["type"]), (int(block["x"]),int(block["cy"])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255))
+            cv2.putText(frameSet[16], "id: %s | type: %d" % (block["id"], block["type"]), (int(block["x"]),int(block["cy"])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0,0,0))
+
+        # X 15 - draw all
+        # X 16 - draw all, no back image
+
+        # =====================================================================
         # get solid contours, discard everything too small or too big
 
         """
@@ -1113,10 +1268,16 @@ class Webcam(object):
                     "x": int(block["cx"]),
                     "y": int(block["cy"]),
                     "w": int(block["w"]),
-                    "h": int(block["h"])
+                    "h": int(block["h"]),
+                    "node_connections": block["node_connections"]
                 } for i,block in blocks.iteritems()],
-                "connectors": [],
-                "nodes": [],
+                "nodes": [{
+                               "id": node["id"],
+                               "x": int(node["cx"]),
+                               "y": int(node["cy"]),
+                               "node_connections": node["node_connections"],
+                               "block_connections": node["block_connections"]
+                           } for i,node in nodes.iteritems()],
                 "timestamp": timestamp(),
                 "frame_id": self.frameN
             }
@@ -1129,7 +1290,6 @@ class Webcam(object):
             self.sim_data = {
                 "type": "digital-logic",
                 "gates": self.bmd_data["blocks"],
-                "wiring": self.bmd_data["connectors"],
                 "nodes": self.bmd_data["nodes"],
                 "timestamp": timestamp(),
                 "frame_id": self.frameN
