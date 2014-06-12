@@ -1,7 +1,9 @@
 BlocSim
 =======
 
-UQ Engineering Thesis: [Bridging Sketch and Simulation of Block Diagram Modelled Systems (pdf)](https://dl.dropboxusercontent.com/u/39512614/github/blocsim/blocsim.pdf)
+University of Queensland - Bachelor of Engineering Thesis
+
+[Bridging Sketch and Simulation of Block Diagram Modelled Systems (pdf)](https://dl.dropboxusercontent.com/u/39512614/github/blocsim/blocsim.pdf)
 
 ----
 
