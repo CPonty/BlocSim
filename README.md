@@ -136,6 +136,12 @@ Run Demo
         cycle_webcam
         disconnect_webcam
 
+        Python example:
+         >> from jsonrpclib import Server
+         >> server = Server('http://localhost:8080/rpc')
+         >> print server.get_config()
+         >> # server.<procedure call>(<args>)
+
 ----
 
 File Structure
