@@ -5,7 +5,8 @@ UQ Engineering Thesis: Bridging Sketch and Simulation of Block Diagram Modelled 
 
 ----
 
-##INSTALLATION
+Installation
+------------
 
 BlocSim is a webserver running Python 2.7. It utilises a number of third-party Python packages.
 
@@ -17,19 +18,17 @@ You may wish to install a [Mosquitto](http://mosquitto.org) client to view/verif
 
 Regardless, you *do* have to install a [Mosquitto](http://mosquitto.org) broker.
 
- - Ubuntu: `sudo apt-get install mosquitto mosquitto-clients`
+ - Ubuntu:
+
+        sudo apt-get install mosquitto mosquitto-clients
 
  - OSX:
 
-    `brew install c-ares mosquitto mosquitto-clients`
-
-    `/usr/local/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf`
-
-    `mkdir -p ~/Library/LaunchAgents`
-
-    `ln -sfv /usr/local/opt/mosquitto/*.plist ~/Library/LaunchAgents`
-
-    `launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mosquitto.plist`
+        brew install c-ares mosquitto mosquitto-clients
+        /usr/local/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf
+        mkdir -p ~/Library/LaunchAgents
+        ln -sfv /usr/local/opt/mosquitto/*.plist ~/Library/LaunchAgents
+        launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mosquitto.plist
 
 **Pip Package Manager**
 
@@ -43,17 +42,18 @@ You may wish to install BlocSim's dependencies in a standalone python installati
 
  - `virtualenv` - [install](http://www.pythonforbeginners.com/basics/how-to-use-python-virtualenv)
 
-**OSX**
+**OSX - Homebrew**
 
 You'll need to install [Homebrew](http://brew.sh), an extremely useful general-purpose install tool.
 
- - `ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)" && brew doctor`
+        ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)" && brew doctor
+        brew install python
 
- - `brew install python`
+Usage:
 
-Usage: `brew install <program/library>`
+        brew install <program/library>
 
-**Windows**
+**Windows - Binaries**
 
 You will find pre-compiled executable installers for many packages [here](http://www.lfd.uci.edu/~gohlke/pythonlibs/)
 
@@ -79,14 +79,16 @@ You will find pre-compiled executable installers for many packages [here](http:/
 
 - `Pillow` - [package](https://github.com/python-pillow/Pillow)
 
-    - osx install: `brew install libtiff libjpeg webp littlecms && sudo pip install Pillow`
+    - osx install:
+
+        brew install libtiff libjpeg webp littlecms && sudo pip install Pillow
 
     - Ubuntu install:
 
-        `sudo apt-get install tk-dev`
-        `sudo apt-get install tcl-dev
-        `sudo pip install python-tk`
-        `sudo pip install -I Pillow`
+        sudo apt-get install tk-dev
+        sudo apt-get install tcl-dev
+        sudo pip install python-tk
+        sudo pip install -I Pillow
 
 - `pickleDB` - [package](https://pythonhosted.org/pickleDB/)
 
@@ -94,14 +96,16 @@ You will find pre-compiled executable installers for many packages [here](http:/
 
 ----
 
-##RUN DEMO
+Run Demo
+--------
 
  - Execute `demo/blocsim.py` to start the webserver
  - Open `localhost:8080` in your browser to view the control panel
 
 ----
 
-##FILE STRUCTURE
+File Structure
+--------------
 
  - `README.md` - you are here
 
