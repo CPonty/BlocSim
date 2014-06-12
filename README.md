@@ -63,7 +63,7 @@ Usage:
 
 ###Windows - Binaries
 
-You will find pre-compiled executable installers for many packages [here](http://www.lfd.uci.edu/~gohlke/pythonlibs/)
+[Pre-compiled executable installers](http://www.lfd.uci.edu/~gohlke/pythonlibs/) are available for many packages
 
 <br/>
 
@@ -119,9 +119,22 @@ Run Demo
 
         mosquitto_sub -t "blocsim"
 
- - Control BlocSim remotely via [JSON-RPC](http://en.wikipedia.org/wiki/JSON-RPC)
+ - Control BlocSim remotely via [JSON-RPC](http://en.wikipedia.org/wiki/JSON-RPC) calls
 
         localhost:8080/rpc
+
+        shutdown
+        save_image
+        save_state
+        get_config
+        set_config( key, value )
+        db_load
+        db_save
+        db_defaults
+        db_load_defaults
+        db_save_defaults
+        cycle_webcam
+        disconnect_webcam
 
 ----
 
@@ -156,4 +169,5 @@ File Structure
     - `cvcommon.py` - opencv utility file
     - `notes.py` - note-taking, in python comment form
     - **`blocsim.py` - main executable file; majority of Python code**
+
 
