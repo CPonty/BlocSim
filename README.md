@@ -111,6 +111,8 @@ File Structure
 
  - `LICENSE` - GPL v2 license
 
+ - `test/` - pre-demo testing files
+
  - `demo/` - prototype used for thesis demonstration
     - `config/` - keystore database is saved here
         - `config.db`, `defaults.db` - JSON keystores for configuration/calibration options
@@ -130,9 +132,7 @@ File Structure
             - `block-model.json` - exported block diagram model (JSON)
     - `templates/` - dynamic 'template' files available to webserver (html files)
         - `*.html`
-    - **`blocsim.py` - main executable file**; majority of Python code
     - `cvcommon.py` - opencv utility file
-    - `notes.py` - note-taking in the form of python comments
-
- - `test/` - pre-demo testing files
+    - `notes.py` - note-taking, in python comment form
+    - **`blocsim.py` - main executable file**; majority of Python code
 
