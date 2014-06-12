@@ -34,15 +34,15 @@ Regardless, you *do* have to install a [Mosquitto](http://mosquitto.org) broker.
 
 **Pip Package Manager**
 
-Most packages can be installed using `pip`, a python package manager.
+Most packages can be installed using [pip](http://pip.readthedocs.org/en/latest/quickstart.html), a python package installer.
 
- - `pip install <package>` - [install pip](http://pip.readthedocs.org/en/latest/installing.html)
+ - `pip install <package>` - [install](http://pip.readthedocs.org/en/latest/installing.html)
 
 <br/>
 
 **Virtualenv**
 
-You may wish to install BlocSim's dependencies in a standalone python installation using `virtualenv`.
+You may wish to install BlocSim's dependencies in a standalone python installation using [virtualenv](http://virtualenv.readthedocs.org/en/latest/virtualenv.html).
 
  - `virtualenv` - [install](http://www.pythonforbeginners.com/basics/how-to-use-python-virtualenv)
 
@@ -89,14 +89,14 @@ You will find pre-compiled executable installers for many packages [here](http:/
 
     - osx install:
 
-        brew install libtiff libjpeg webp littlecms && sudo pip install Pillow
+            brew install libtiff libjpeg webp littlecms && sudo pip install Pillow
 
     - Ubuntu install:
 
-        sudo apt-get install tk-dev
-        sudo apt-get install tcl-dev
-        sudo pip install python-tk
-        sudo pip install -I Pillow
+            sudo apt-get install tk-dev
+            sudo apt-get install tcl-dev
+            sudo pip install python-tk
+            sudo pip install -I Pillow
 
 - `pickleDB` - [package](https://pythonhosted.org/pickleDB/)
 
