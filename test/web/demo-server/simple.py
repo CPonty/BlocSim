@@ -1824,7 +1824,7 @@ class RPCHandler(JSONRPCHandler):
         # save the block diagram model
         f = open(os.path.join(dname, "block-model.json"), "wb")
         with G.bmdLock:
-            json.dump(W.bmd_data, f)
+            json.dump(W.bmd_data, f, sort_keys=True, indent=4, separators=(',', ': '))
         f.close()
         msg = "State saved: "+dname
         if G.DBG_RPC: logging.info("RPC: "+msg)
