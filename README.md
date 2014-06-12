@@ -30,17 +30,23 @@ Regardless, you *do* have to install a [Mosquitto](http://mosquitto.org) broker.
         ln -sfv /usr/local/opt/mosquitto/*.plist ~/Library/LaunchAgents
         launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mosquitto.plist
 
+<br/>
+
 **Pip Package Manager**
 
 Most packages can be installed using `pip`, a python package manager.
 
  - `pip install <package>` - [install pip](http://pip.readthedocs.org/en/latest/installing.html)
 
+<br/>
+
 **Virtualenv**
 
 You may wish to install BlocSim's dependencies in a standalone python installation using `virtualenv`.
 
  - `virtualenv` - [install](http://www.pythonforbeginners.com/basics/how-to-use-python-virtualenv)
+
+<br/>
 
 **OSX - Homebrew**
 
@@ -52,6 +58,8 @@ You'll need to install [Homebrew](http://brew.sh), an extremely useful general-p
 Usage:
 
         brew install <program/library>
+
+<br/>
 
 **Windows - Binaries**
 
