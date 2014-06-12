@@ -12,7 +12,7 @@ BlocSim is a webserver running Python 2.7. It requires a webcam and a number of 
 
 <br/>
 
-**Mosquitto**
+###Mosquitto
 
 You may wish to install a [Mosquitto](http://mosquitto.org) client to view/verify the Publish/Subscribe block model output.
 
@@ -32,7 +32,7 @@ Regardless, you *do* have to install a [Mosquitto](http://mosquitto.org) broker.
 
 <br/>
 
-**Pip Package Manager**
+###Pip Package Manager
 
 Most packages can be installed using [pip](http://pip.readthedocs.org/en/latest/quickstart.html), a python package installer.
 
@@ -40,7 +40,7 @@ Most packages can be installed using [pip](http://pip.readthedocs.org/en/latest/
 
 <br/>
 
-**Virtualenv**
+###Virtualenv
 
 You may wish to install BlocSim's dependencies in a standalone python installation using [virtualenv](http://virtualenv.readthedocs.org/en/latest/virtualenv.html).
 
@@ -48,7 +48,7 @@ You may wish to install BlocSim's dependencies in a standalone python installati
 
 <br/>
 
-**OSX - Homebrew**
+###OSX - Homebrew
 
 You'll need to install [Homebrew](http://brew.sh), an extremely useful general-purpose install tool.
 
@@ -61,13 +61,13 @@ Usage:
 
 <br/>
 
-**Windows - Binaries**
+###Windows - Binaries
 
 You will find pre-compiled executable installers for many packages [here](http://www.lfd.uci.edu/~gohlke/pythonlibs/)
 
 <br/>
 
-**Package listing**
+###Package listing
 
 - `OpenCV 2.4` - [info](http://opencv.org/)
 
@@ -155,5 +155,5 @@ File Structure
         - `*.html`
     - `cvcommon.py` - opencv utility file
     - `notes.py` - note-taking, in python comment form
-    - **`blocsim.py` - main executable file**; majority of Python code
+    - **`blocsim.py` - main executable file; majority of Python code**
 
