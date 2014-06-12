@@ -107,8 +107,21 @@ You will find pre-compiled executable installers for many packages [here](http:/
 Run Demo
 --------
 
- - Execute `demo/blocsim.py` to start the webserver
- - Open `localhost:8080` in your browser to view the control panel
+ - Start the webserver
+
+        cd demo && ./blocsim.py
+
+ - Open the control panel in your browser (Chrome, Firefox or Safari)
+
+        localhost:8080
+
+ - Subscribe to the [Mosquitto](http://mosquitto.org) messages being published
+
+        mosquitto_sub -t "blocsim"
+
+ - Control BlocSim remotely via [JSON-RPC](http://en.wikipedia.org/wiki/JSON-RPC)
+
+        localhost:8080/rpc
 
 ----
 
