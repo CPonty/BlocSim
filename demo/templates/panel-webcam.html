@@ -1,0 +1,374 @@
+<!--
+Webcam
+<br/><br/>
+-->
+<!--<img style="border: 2px solid #7f7f7f;" src="" width="1920" height="1080"><br/>-->
+
+<!--<div class="button not-button">Hi!</div>-->
+<!--
+<div class="not-button ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only">
+    <span class="ui-button-text">Hi!</span>
+</div>
+-->
+
+<!--
+<div class="buttonset">
+    <div class="button not-button skinny-button">Hi!</div>
+    <button class="button skinny-button">2</button>
+    <button class="button">3</button>
+</div>
+-->
+<span style="position:absolute; top:0; right:0">
+    <input type="checkbox" id="frame-tab-check-expand" class="arrow-2-ne-sw-icon" checked="1">
+    <label for="frame-tab-check-expand"> Expand viewer </label>
+</span>
+<div style="">
+    <span style="display:inline-block">
+        <label for="webcam-tab-frame-name">View (use [ , ] keys): &nbsp; </label>
+        <select name="frame-name-id" id="webcam-tab-frame-name">
+            <option>0) Raw Frame</option>
+            <option>1) Cropped Frame</option>
+
+            <option>2) (Red) Color Backprojection</option>
+            <option>3) (Red) Mask - Thresholded & filtered</option>
+            <option>4) (Red) Object Detection</option>
+
+            <option>5) (Green) Color Backprojection</option>
+            <option>6) (Green) Mask - Thresholded & filtered</option>
+            <option>7) (Green) Object Detection</option>
+            <option>8) (Block) Only red objects containing green object</option>
+
+            <option>9) (Black) Color Backprojection</option>
+            <option>10) (Black) Mask - Thresholded & filtered</option>
+            <option>11) (Black) Cropped frame again (for convenience)</option>
+            <option>12) (Black) Object Dilation</option>
+
+            <option>13) (Nodes) Intersection of Red object, dilated Black object </option>
+            <option>14) (Connectors) Only black objects containing nodes</option>
+
+            <option>15) (All) Overlay on colour image</option>
+            <option>16) (Model) Block Diagram model </option>
+        </select>
+        <div id="framebar-wrap">
+            <div id="framebar"> &nbsp; </div>
+        </div>
+    </span>
+</div>
+<!--<div style="width:100%">-->
+    <!--
+    <p>
+        <label for="amount">Display:</label>
+        <input type="text" id="amount" style="border:0; color:#f6931f; font-weight:bold;">
+    </p>
+    -->
+    <!--<div id="webcam-tab-frame-slider" style="width: 94%; left:3%; right:3%; margin-bottom: 0em; margin-top: 0.5em"></div>-->
+
+<!--</div>--><!-- width: auto vs. 100% -->
+<div id="webcam-tab-frame-supercontainer" style="float: left; width:100%; height:auto"> <!-- ; min-width:320px; min-height:320px --><!-- HERE is where you set the min. image width -->
+    <div class="stay-in-container">
+        <div class="buttonset toolbar-nw">
+            <!--
+            <button class="button">A</button>
+            <button class="button skinny-button">B</button>
+            <div class="button not-button skinny-button">Hi!</div>
+            <a>B</a>
+            -->
+        </div>
+        <div style="margin-right:3px" class="buttonset toolbar-ne">
+            <!--
+            <input type="radio" name="webcam-tab-drawsize" id="webcam-tab-draw-scrollable" class="button arrow-4-icon" checked="1">
+            <label for="webcam-tab-draw-scrollable" style="margin-right: -5px"> Scroll </label>
+            <input type="radio" name="webcam-tab-drawsize" id="webcam-tab-draw-stretch" class="button arrow-2-ne-sw-icon">
+            <label for="webcam-tab-draw-stretch" style="margin-right: -5px"> Stretch </label>
+            <input type="radio" name="webcam-tab-drawsize" id="webcam-tab-draw-max" class="button extlink-icon">
+            <label for="webcam-tab-draw-max" style="margin-right: -5px"> Stretch </label>
+            -->
+        </div>
+    </div>
+    <!--
+    <div id="webcam-tab-toolbar-nw" class="toolbar-nw ui-corner-all">
+        <button></button>
+        <button></button>
+    </div>
+    -->
+    <!--
+    <div id="webcam-tab-toolbar-ne" class="buttonbar">
+        <button id="webcam-tab-wide" style="float: right" class="arrow-4-diag-icon"> Widescreen </button>
+        <button id="webcam-tab-fullscreen" style="float: right" class="arrow-4-diag-icon"> Fullscreen </button>
+    </div>
+    -->
+    <!--<div style="clear:both"> &nbsp; </div>-->
+    <!--<br/>-->
+    <!--
+        <div style="height: 0.4em"> &nbsp; </div>
+        <div id="webcam-tab-frame-slider" style="width:94%; margin-left:3%; margin-right:3%; margin-top:0.2em; margin-bottom:0.4em"></div>
+    -->
+    <div id="webcam-tab-frame-container" style="width:100%"><!-- ; min-height:240px; min-width:320px -->
+        <!--<iframe name="webcam-tab-frame-iframe" src="/ajax" frameborder="0" scrolling="auto" width="1920" height="1080" marginwidth="0" marginheight="0" >
+        </iframe>-->
+
+        <!--min-height: 480px; max-height: 100%; -->
+        <!--<div style="width:100%; height: 100%">-->
+        <img id='frame' src='frame.jpg' class="sidebar-left" style="width:100%; max-width: 100%; border: 2px solid black">
+        <!--</div>-->
+    </div>
+    <br/>
+</div>
+<div style="clear:both"> &nbsp; </div>
+<br/>
+
+<a href="#!" id="calib-tab-accordion-link" class="tab-accordion unhyperlink">
+    <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+         class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
+    Calibration Panel
+</a>
+<hr/>
+<div id="calib-tab-panel" class="tab-accordion-area textspan grey-panel">
+    <div id="slider-override-div">
+        <div class="slider-clustered">
+            <div style="margin-bottom: 0.5em">
+                <span id="label-0" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-0" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-0"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-1" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-1" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-1"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-2" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-2" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-2"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-3" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-3" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-3"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-4" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-4" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-4"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-5" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-5" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-5"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-6" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-6" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-6"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-7" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-7" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-7"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-8" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-8" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-8"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-9" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-9" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-9"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-10" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-10" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-10"></div>
+        </div>
+        <div class="slider-clustered">
+            <div style="margin-bottom: 1em">
+                <span id="label-11" style="margin-right: 5px; font-weight: bold">range:</span>
+                <span id="amount-11" style="border:0; color:#f6931f; font-weight:bold;"></span>
+            </div>
+            <div id="sliderrange-11"></div>
+        </div>
+    </div>
+    <br/>
+    <div>
+        <!--<hr/>-->
+        <br/>
+        <div class="buttonset" style="display: inline-block">
+            <button id="db-save">Save</button>
+            <button id="db-load">Load</button>
+            <button id="db-save-defaults">Save as defaults</button>
+            <button id="db-load-defaults">Load from defaults</button>
+            <button id="db-defaults">Re-generate config</button>
+        </div>
+        <!--<span style="width:1em"> &nbsp; </span>-->
+        <br/><br/>
+        <div class="buttonset" style="display: inline-block">
+            <input value="1" type="checkbox" id="webcam-tab-check-fromfile">
+            <label for="webcam-tab-check-fromfile"> Load Frame </label>
+            <button id="frame-save"> Save Frame </button>
+            <button id="state-save"> Save Full State </button>
+        </div >
+    </div>
+    <br/>
+</div>
+<a href="#!" id="keystore-tab-accordion-link" class="tab-accordion unhyperlink">
+    <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+         class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
+    Calibration keystore
+</a>
+<hr/>
+<div id="keystore-tab-panel" class="tab-accordion-area textspan">
+    <pre id="test-tab-db-text"></pre>
+</div>
+<a href="#!" id="test-tab-accordion-link" class="tab-accordion unhyperlink">
+    <div style="background-image: url(static/css/blocsim-style/images/ui-icons_000000_256x240.png) !important;"
+         class="accordion-arrow ui-icon ui-icon-triangle-1-n"> &nbsp; </div>
+    Websocket Traffic
+</a>
+<hr/>
+<div id="test-tab-panel" class="tab-accordion-area textspan">
+    <!--<br/>
+    Inbound server message:-->
+    <pre id="test-tab-sockjs-text"></pre>
+</div>
+<!--div.button.not-button.ui-button.ui-widget.ui-state-default.ui-corner-all.ui-button-text-only-->
+<script>
+    $( function() {
+    });
+
+  $(function() {
+
+
+    var select = $( "#webcam-tab-frame-name" );
+    var select_opts = $('#webcam-tab-frame-name option')
+    /*
+    var slider = $( "#webcam-tab-frame-slider" ).slider({
+      min: 0,
+      max: 16,
+      range: "min",
+      value: select[ 0 ].selectedIndex,
+      slide: function( event, ui ) {
+        select[ 0 ].selectedIndex = ui.value;
+        frame_reload();
+      }
+    });
+    */
+
+    $( "#webcam-tab-frame-name" ).change(function() {
+      $( "#framebar" ).css("width", (this.selectedIndex/(select_opts.length-1)*100)+"%");
+      frame_reload();
+      // slider.slider( "value", this.selectedIndex );
+    });
+
+    select[0].selectedIndex = 1;
+    select.change();
+
+
+  $('html').keydown(function(e){
+    if (e.which==219 || e.which==37 || e.which==81) { // <-- [ Q
+      if (select[0].selectedIndex > 0) select[0].selectedIndex -= 1;
+      select.change();
+    }
+    else if (e.which==221 || e.which==39 || e.which==69) { // --> ] E
+      if (select[0].selectedIndex < 16) select[0].selectedIndex += 1;
+      select.change();
+    }
+    else if (e.which>=49 && e.which<=57) { // 1..9
+      select[0].selectedIndex = e.which-48;
+      select.change();
+    }
+    else if (e.which==192) { // ~ , to the left of 1..9
+      select[0].selectedIndex = 0
+      select.change();
+    }
+    else if (e.which==83) { // S
+      $( "#server-sidebar-eject" ).click();
+    }
+    else if (e.which==87) { // W
+      $( "#frame-tab-check-expand" ).click();
+    }
+    else if (e.which==65) { // A
+      $( "#sidebar-collapsebtn" ).click();
+    }
+    else if (e.which==68) { // D
+      $( "#webcam-sidebar-cycle" ).click();
+    }
+    else if (e.which==79) { // O
+      $( "#server-sidebar-shutdown" ).click();
+    }
+    /*
+    if (e.which==80) { // P
+      if (blocsim_vars.webcam.mode==1) {
+        $( "#webcam-sidebar-mode-2" ).prop('checked',true);
+      } else {
+        $( "#webcam-sidebar-mode-1" ).prop('checked',true);
+      }
+    }
+    */
+
+    //webcam-sidebar-mode-1
+  });
+
+
+  });
+
+
+ $(function() {
+   for (var i=0; i<sliderNames.length; i++) {
+    //console.log(blocsim_calib);
+    //console.log(blocsim_calib[sliderNames[i]]);
+    calib = blocsim_calib[sliderNames[i]];
+    if (typeof calib[0] == "boolean") {
+      $( "#sliderrange-"+i.toString() ).slider({
+        range: calib[0],
+        min: calib[1],
+        max: calib[2],
+        values: [ calib[3], calib[4] ],
+        slide: function( event, ui ) {
+          var name = this.id.toString().split("-")[1];
+          $( "#amount-"+name ).html( "" + ui.values[ 0 ] + " - " + ui.values[ 1 ] );
+        }
+      });
+      $( "#amount-"+i.toString() ).html( "" + $( "#sliderrange-"+i.toString() ).slider( "values", 0 ) +
+        " - " + $( "#sliderrange-"+i.toString() ).slider( "values", 1 ) );
+    } else if (typeof calib[0] == "string") {
+      $( "#sliderrange-"+i.toString() ).slider({
+        range: calib[0],
+        min: calib[1],
+        max: calib[2],
+        value: calib[3],
+        slide: function( event, ui ) {
+          var name = this.id.toString().split("-")[1];
+          $( "#amount-"+name ).html( "" + ui.value );
+        }
+      });
+      $( "#amount-"+i.toString() ).html( "" + $( "#sliderrange-"+i.toString() ).slider( "value" ));
+    } else {
+      console.error(typeof calib[0] + "Invalid range format for initialising slider ("+i+")");
+    }
+
+    $( "#label-"+i.toString() ).html( "" + sliderNames[i]);
+   }
+  });
+</script>

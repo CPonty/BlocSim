@@ -1,4 +1,4 @@
 BlocSim
 =======
 
-UQ Engineering Thesis: Bridging BMD (Block Model Diagram) sketching and simulation
+UQ Engineering Thesis: Bridging Sketch and Simulation of Block Diagram Modelled Systems
