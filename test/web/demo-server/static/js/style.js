@@ -33,41 +33,21 @@ $(function() {
   }
   // remove all effects, events from 'fake' buttons  
   $('.not-button').unbind();
-  /*
-  $( ".not-button" ).click(function() { 
-    $(this).removeClass("ui-state-active"); 
-    return false; 
-  });
-  */
-  //$( ".not-button" ).off("click");
-  //$( ".not-button" ).removeClass("ui-state-active"); 
-  /*
-  $( ".not-button" ).focus(function () {
-    $(this).removeClass("ui-state-focus");
-  });
-  */
-  /*
-  $( ".not-button" ).active(function () {
-    $(this).removeClass("ui-state-active");
-  });
-  */
-  /*
-  $( ".pause-icon" ).button({text: false, icons: {primary: "ui-icon-pause"}});
-  $( ".pause-text" ).button({text: true, icons: {primary: "ui-icon-pause"}});
-  $( ".pause-icon" ).button({text: false, icons: {primary: "ui-icon-pause"}});
-  $( ".close-text" ).button({text: true, icons: {primary: "ui-icon-closethick"}});
-  $( ".close-icon" ).button({text: false, icons: {primary: "ui-icon-closethick"}});
-  $( ".refresh-text" ).button({text: true, icons: {primary: "ui-icon-arrowrefresh-1-w"}});
-  $( ".refresh-icon" ).button({text: false, icons: {primary: "ui-icon-arrowrefresh-1-w"}});
-  $( ".power-text" ).button({text: true, icons: {primary: "ui-icon-power"}});
+
+  /* Having to do this is silly - it's automated above
+    $( ".pause-icon" ).button({text: false, icons: {primary: "ui-icon-pause"}});
+    $( ".pause-text" ).button({text: true, icons: {primary: "ui-icon-pause"}});
+    $( ".pause-icon" ).button({text: false, icons: {primary: "ui-icon-pause"}});
+    $( ".close-text" ).button({text: true, icons: {primary: "ui-icon-closethick"}});
+    $( ".close-icon" ).button({text: false, icons: {primary: "ui-icon-closethick"}});
+    $( ".refresh-text" ).button({text: true, icons: {primary: "ui-icon-arrowrefresh-1-w"}});
+    ...
   */
   $( ".accordion" ).accordion({heightStyle: "content"});
   $( ".buttonset" ).buttonset();
   $( ".tabs" ).tabs({event: "click"}).css("border", "none"); // mouseover for hover-tabs
   $( "#server-indicator" ).css("background-color", "#00cc00");
   $( "#webcam-indicator" ).css("background-color", "#f6931f");
-  //console.log($(".tabs a"))
-  //$(".tabs").css('height', $(".tabs").height());
   /*
   $('.tab-header.a').click(function(e) {
     e.preventDefault();
@@ -143,20 +123,11 @@ $(function() {
     if ($(this).position().left > 100)
       $('#sidebar-collapsebtn').css('visibility', 'hidden');
   });
-
-  /*
-  $('#whichTabBtn').click(function(e){
-    alert($("#tabs").tabs('option', 'active'));
-  });
-  */
-  
-  //$(".tab-header").appendTo('.header');
-
-  //$("#tabs").tabs('option', 'active')
   
   /* UI events */
 
   // setup some dropdown menus
+  // Disabled
   /*
   $( "#cv-sidebar-resolution-dropdown" ).button().click(function() { //dropdownbtn
     if (! (typeof window.activemenu === 'undefined') ) {
@@ -182,9 +153,4 @@ $(function() {
     $( this ).effect( "highlight", {color: '#b8ec79'}, 1000); 
   });
 
-  //var rpcText="";
-  //rpcText+="from jsonrpclib import Server<br/>";
-  //rpcText+="server = Server('http://localhost:8080/rpc')<br/>";
-  //rpcText+="print server.get_config()<br/>";
-  //$( "#rpc-tab-hint-text" ).html(syntaxHighlight(JSON.stringify(rpcText, undefined, 4)));
 });

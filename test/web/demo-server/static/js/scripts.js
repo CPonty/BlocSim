@@ -50,16 +50,6 @@ blocsim_vars = {
 
 //console.log(blocsim_calib);
 
-//blocsim_config = {};
-/*
-function load_server_config() {
-	$.getJSON("config.json", function(json) {
-		console.log("Received server state");
-	    console.log(json);
-	});
-}
-*/
-
 var sock = null;
 
 // ====================================================================
@@ -178,16 +168,16 @@ blocsim_rpc.handle.disconnect_webcam = rpc_call_alert_handler;
 blocsim_rpc.handle.save_image = rpc_call_alert_handler;
 blocsim_rpc.handle.save_state = rpc_call_alert_handler;
 
+// ====================================================================
+rpc_call_gen_all(); // call after defining all the handlers
+// ====================================================================
+
 /*
 blocsim_rpc.handle.helloworld = function(response) {
 	console.log("response");
 	console.log(JSON.stringify(response));
 }
 */
-
-// ====================================================================
-rpc_call_gen_all(); // call after defining all the handlers
-// ====================================================================
 
 //rpc_call("helloworld");
 
@@ -199,39 +189,8 @@ request.method = "helloworld";
 request.params = {};
 request.id = 1;
 request.jsonrpc = "2.0";
-
-function displaySearchResult(response) {
-
-        if (response.result)
-                alert(response.result);
-
-        else if (response.error)
-                alert("Search error: " + response.error.message);
-};
-console.log("ready to go!");
-//console.log(JSON.stringify(request));
-//$.post(url, JSON.stringify(request), displaySearchResult, "json");
-*/
-// make a shutdown() rpc call - nice test
-// fix the ajax call for the image
-	// then swap it with a base64 rpc
-
-// ====================================================================
-
-/*
-blocsim_rpc.send.shutdown = function() {
-	$.post({ //$.post
-		url: "/rpc",
-		data: "", //JSON.stringify(request)
-		success: blocsim_rpc.handle.shutdown,
-		dataType: "json"
-	});
-}
 */
 
-// ====================================================================
-
-/* UI events */
 /*
 function shutdown() {
   $.ajax({
@@ -244,6 +203,10 @@ function shutdown() {
   });
 }
 */
+
+// ====================================================================
+
+/* UI events */
 
 function rgb2hex(rgb) {
     rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+))?\)$/);
@@ -261,12 +224,12 @@ function indicator_update( JQueryId, color ) {
 	}
 }
 
+/* relics of when I was using AJAX calls instead of websockets + base64 to stream images */
 function frame_reload() {
     //$( "#frame" ).attr('src', 
     //	"frame.jpg?id="+$( "#webcam-tab-frame-name" )[0].selectedIndex.toString()+"#"+time_ms()
 	    //);
 }
-
 function frame_loaded() {
     //if ( blocsim_vars.webcam.mode == 1 ) {
     //    window.setTimeout(frame_reload, blocsim_vars.frame_reload_delay);
@@ -289,13 +252,11 @@ $(function() {
 	*/
     window.setTimeout(frame_reload, 500);
 
-
-
+// ====================================================================
 
 	$( "#server-sidebar-shutdown" ).click(function() {
 		rpc_call("shutdown");
 	});
-
 
 	$("input[name=webcam-tab-drawsize]:radio").change(function () {
 		alert('drawsize');
@@ -392,8 +353,6 @@ $(function() {
 			$( "#callback-sidebar-text" ).html("Video input: Webcam");
 		}
 	});
-
-	
 
 	/*
 	$('#frame').click(function() {
@@ -586,7 +545,6 @@ sockjs_connect = function() {
 	    //console.log(html);
 	    //console.log(e.data);
 	    //$( "#test-tab-sockjs-text" ).html(syntaxHighlight(e.data));
-	    
 	    //console.log(received.db);
 	};
 	sock.onclose = function() {
@@ -614,7 +572,14 @@ sockjs_disconnect = function() {
 $(function() {
 	sockjs_connect();
 
-	//var conn = null;
+	window.setTimeout(function() {
+		window.setInterval(blocsim_event_loop, blocsim_vars.event_period);
+	}, 1000);
+	window.setInterval(blocsim_tick_loop, 1000);
+	
+});
+
+//var conn = null;
 
 /*
 	connect = function() {
@@ -644,15 +609,3 @@ $(function() {
 		}
 	}
 */
-
-	window.setTimeout(function() {
-		window.setInterval(blocsim_event_loop, blocsim_vars.event_period);
-	}, 1000);
-	window.setInterval(blocsim_tick_loop, 1000);
-
-	//window.setTimeout(function(){
-	//	console.log("First connect attempt");
-	//	connect();
-	//}, 100);
-	
-});

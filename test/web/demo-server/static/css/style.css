@@ -83,35 +83,8 @@ body {
 	/*padding-bottom: 2em;*/
 }
 .tabs {
-	/*
-    height: 100% auto;
-	overflow-x: hidden;
-	overflow-y: hidden;
-	*/
-    /*overflow-y: overlay;*/ /*auto*/
-    /*
-	position: relative; 
-    float: top;
-    display: inline-block;
-    overflow: visible;
-    */
 }
 .tab {
-	/*
-	margin-right: 0 !important;
-	padding-right: 0 !important;
-	*/
-	/*
-	float: top;
-	overflow-x: hidden;
-	overflow-y: hidden;
-	*/
-	/*
-	position: relative; 
-    float: top;
-	display: inline-block;
-	overflow: visible;
-	*/
 }
 .tab-button {
 
@@ -170,12 +143,6 @@ body {
 	/*height: 100%;*/
 	padding-left: 0em;
 }
-/*
-.tab-header-2 {
-	vertical-align: bottom;
-	padding-left: 5em;
-}
-*/
 hr {
 	margin-left: -0.35em;
 	margin-right: 0.35em;
@@ -235,35 +202,6 @@ hr {
 	border-top-left-radius: 0;
 	border-top-right-radius: 0
 }
-
-/*
-.tab-header-2 { 
-    background: transparent; 
-    border: none; 
-} 
-.tab-header-2 .ui-widget-header { 
-    background: transparent; 
-    border: none; 
-    border-bottom: 1px solid #c0c0c0; 
-    -moz-border-radius: 0px; 
-    -webkit-border-radius: 0px; 
-    border-radius: 0px; 
-} 
-.tab-header-2 .ui-tabs-nav .ui-state-default { 
-    background: transparent; 
-    border: none; 
-} 
-.tab-header-2 .ui-tabs-nav .ui-state-active { 
-    background: transparent url(images/uiTabsArrow.png) no-repeat bottom center; 
-    border: none; 
-} 
-.tab-header-2 .ui-tabs-nav .ui-state-default a { 
-    color: #c0c0c0; 
-} 
-.tab-header-2 .ui-tabs-nav .ui-state-active a { 
-    color: #459e00; 
-}
-*/
 /*^^^^^^^^^^^^^^^^^^*/
 
 .page {
@@ -325,40 +263,6 @@ hr {
     overflow: hidden;
     /*overflow: scroll;*/
 }
-/*
-.body {
-	position: relative;
-	top: 7em;
-	padding-top: 0.5em;
-	padding-bottom: 2em;
-    width: 100%;
-    overflow: hidden;
-}
-
-.body-left {
-	width: auto;
-    max-width: 40em;
-    float: left;
-    margin-right: 1em;
-    overflow: hidden;
-    overflow-y:auto;
-  	height: 100%;
-}
-
-.body-right {
-	min-width: 75em;
-	min-height: 35em;
-    float: left;
-	background-color: white;
-    border: 1px solid #7f7f7f;
-    padding: 1em;
-    margin-left: 1em;
-    margin-right: 1em;
-    margin-bottom: 1em;
-    width: 150%;
-    height: 1000px;
-}
-*/
 .body-clear {
 	clear: both;
 }
