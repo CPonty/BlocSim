@@ -1,14 +1,14 @@
 BlocSim
 =======
 
-UQ Engineering Thesis: Bridging Sketch and Simulation of Block Diagram Modelled Systems
+UQ Engineering Thesis: [Bridging Sketch and Simulation of Block Diagram Modelled Systems (pdf)](https://dl.dropboxusercontent.com/u/39512614/github/blocsim/blocsim.pdf)
 
 ----
 
 Installation
 ------------
 
-BlocSim is a webserver running Python 2.7. It utilises a number of third-party Python packages.
+BlocSim is a webserver running Python 2.7. It requires a webcam and a number of third-party Python packages.
 
 <br/>
 
