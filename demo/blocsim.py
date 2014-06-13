@@ -836,12 +836,12 @@ class Webcam(object):
         print db.bounds_x
         print db.bounds_y
         """
-        f = f[
-            int(db.bounds_y[0]/100.0*h) : int(db.bounds_y[1]/100.0*h),
-            int(db.bounds_x[0]/100.0*w) : int(db.bounds_x[1]/100.0*w)
-        ]
+        fx0, fx1 = int(db.bounds_x[0]/100.0*w), int(db.bounds_x[1]/100.0*w)
+        fy0, fy1 = int(db.bounds_y[0]/100.0*h), int(db.bounds_y[1]/100.0*h)
+        f = f[fy0:fy1, fx0:fx1]
         w = f.shape[1]
         h = f.shape[0]
+        cv2.rectangle(frameSet[0],(fx0-1,fy0-1),(fx1+1,fy1+1),(0,0,255),2)
         #cv2.rectangle(f,(0,0),(int(db.bounds_x[0]/100.0*w),h),(255,255,255),-1)
         #cv2.rectangle(f,(0,0),(w,int(db.bounds_y[0]/100.0*h)),(255,255,255),-1)
         #cv2.rectangle(f,(0,int((db.bounds_y[1])/100.0*h)),(w,h),(255,255,255),-1)
