@@ -192,11 +192,11 @@ File Structure
  
  > `templates/` - dynamic 'template' files available to webserver (html files)
  
- > > > `*.html`
+ > > `*.html`
  
- > > `cvcommon.py` - opencv utility file
+ > `cvcommon.py` - opencv utility file
  
- > > `notes.py` - note-taking, in python comment form
+ > `notes.py` - note-taking, in python comment form
  
- > >  **`blocsim.py` - main executable file; majority of Python code**
+ >  **`blocsim.py` - main executable file; majority of Python code**
 
