@@ -156,26 +156,47 @@ File Structure
  - `test/` - pre-demo testing files
 
  - `demo/` - prototype used for thesis demonstration
-    - `config/` - keystore database is saved here
-        - `config.db`, `defaults.db` - JSON keystores for configuration/calibration options
-    - `static/` - static files available to webserver
-        - `css/` - stylesheets
-            - `style.css` - custom styles
-            - `blocsim-style/` - customised JQuery-UI theme [built here](http://jqueryui.com/download/)
-        - `images/` - saved webcam images appear here
-            - `<timestamp>.jpg`
-            - `frame.jpg` - copy of most recently saved image
-        - `js/` - folder containing `jquery`, `jquery-ui`, `sockjs` and custom javascript
-            - `style.js` - UI configuration & visuals
-            - `scripts.js` - UI function & server interaction
-        - `saves/` - saved states appear here in `state_<timestamp>/` style folders
-            - `frame[1..16].jpg` - images showing all computer vision steps
-            - `config.db` - exported config keystore (JSON)
-            - `block-model.json` - exported block diagram model (JSON)
-    - `templates/` - dynamic 'template' files available to webserver (html files)
-        - `*.html`
-    - `cvcommon.py` - opencv utility file
-    - `notes.py` - note-taking, in python comment form
-    - **`blocsim.py` - main executable file; majority of Python code**
-
+ > `config/` - keystore database is saved here
+ 
+ > > `config.db`, `defaults.db` - JSON keystores for configuration/calibration options
+ 
+ > `static/` - static files available to webserver
+ 
+ > > `css/` - stylesheets
+ 
+ > > > `style.css` - custom styles
+ 
+ > > > `blocsim-style/` - customised JQuery-UI theme [built here](http://jqueryui.com/download/)
+ 
+ > > `images/` - saved webcam images appear here
+ 
+ > > > `<timestamp>.jpg`
+ 
+ > > > `frame.jpg` - copy of most recently saved image
+ 
+ > > `js/` - folder containing `jquery`, `jquery-ui`, `sockjs` and custom javascript
+ 
+ > > > `style.js` - UI configuration & visuals
+ 
+ > > > `scripts.js` - UI function & server interaction
+ 
+ > > `saves/` - grouped into folders
+ 
+ > > > `state_<timestamp>/`
+ 
+ > > > > `frame[1..16].jpg` - images showing all computer vision steps
+ 
+ > > > > `config.db` - exported config keystore (JSON)
+ 
+ > > > > `block-model.json` - exported block diagram model (JSON)
+ 
+ > `templates/` - dynamic 'template' files available to webserver (html files)
+ 
+ > > > `*.html`
+ 
+ > > `cvcommon.py` - opencv utility file
+ 
+ > > `notes.py` - note-taking, in python comment form
+ 
+ > >  **`blocsim.py` - main executable file; majority of Python code**
 
